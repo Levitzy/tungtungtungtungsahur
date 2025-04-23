@@ -11,6 +11,7 @@ from functools import wraps
 from auth.login import facebook_login
 from utils.headers import get_headers
 from utils.user_agents import get_random_user_agent
+from utils.cookie_manager import format_cookies_json, format_cookies_string
 
 app = Flask(__name__)
 
@@ -213,10 +214,17 @@ def login():
         if use_cache:
             cookie_data = credentials_cache[email_hash]["cookies"]
 
-            # Build cookie string
-            cookie_string = "; ".join(
-                [f"{cookie['name']}={cookie['value']}" for cookie in cookie_data]
-            )
+            # Convert cookie data to string format
+            from collections import namedtuple
+
+            Cookie = namedtuple("Cookie", ["name", "value", "path"])
+
+            cookie_objects = [
+                Cookie(name=cookie["key"], value=cookie["value"], path=cookie["path"])
+                for cookie in cookie_data
+            ]
+
+            cookie_string = format_cookies_string(cookie_objects)
 
             return jsonify(
                 {
@@ -237,21 +245,8 @@ def login():
 
     if session and cookies:
         # Format cookies for response
-        cookie_data = []
-        for cookie in cookies:
-            cookie_data.append(
-                {
-                    "name": cookie.name,
-                    "value": cookie.value,
-                    "domain": cookie.domain,
-                    "path": cookie.path,
-                }
-            )
-
-        # Create cookie string
-        cookie_string = "; ".join(
-            [f"{cookie.name}={cookie.value}" for cookie in cookies]
-        )
+        cookie_data = format_cookies_json(cookies)
+        cookie_string = format_cookies_string(cookies)
 
         # Cache the cookies
         credentials_cache[email_hash] = {
@@ -302,9 +297,16 @@ def get_cookies(email_hash):
         cookie_data = credentials_cache[email_hash]["cookies"]
 
         # Create cookie string
-        cookie_string = "; ".join(
-            [f"{cookie['name']}={cookie['value']}" for cookie in cookie_data]
-        )
+        from collections import namedtuple
+
+        Cookie = namedtuple("Cookie", ["name", "value", "path"])
+
+        cookie_objects = [
+            Cookie(name=cookie["key"], value=cookie["value"], path=cookie["path"])
+            for cookie in cookie_data
+        ]
+
+        cookie_string = format_cookies_string(cookie_objects)
 
         return jsonify(
             {
@@ -584,7 +586,7 @@ GET /api/login?email=your_email@example.com&password=your_password&use_cache=tru
   "status": "success",
   "message": "Login successful",
   "cookies_json": [
-    { "name": "cookie_name", "value": "cookie_value", "domain": "facebook.com", "path": "/" },
+    { "key": "cookie_name", "value": "cookie_value", "domain": "facebook.com", "path": "/", ... },
     ...
   ],
   "cookies_string": "cookie_name=cookie_value; cookie_name2=cookie_value2; ..."
@@ -602,7 +604,7 @@ GET /api/login?email=your_email@example.com&password=your_password&use_cache=tru
   "status": "success",
   "message": "Cookies retrieved successfully",
   "cookies_json": [
-    { "name": "cookie_name", "value": "cookie_value", "domain": "facebook.com", "path": "/" },
+    { "key": "cookie_name", "value": "cookie_value", "domain": "facebook.com", "path": "/", ... },
     ...
   ],
   "cookies_string": "cookie_name=cookie_value; cookie_name2=cookie_value2; ...",
@@ -664,7 +666,7 @@ if result["status"] == "success":
     # Example: Create a session with these cookies
     session = requests.Session()
     for cookie in cookies_json:
-        session.cookies.set(cookie["name"], cookie["value"], 
+        session.cookies.set(cookie["key"], cookie["value"], 
                           domain=cookie["domain"], path=cookie["path"])
     
     # Use the session for authenticated requests

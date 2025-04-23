@@ -505,27 +505,61 @@ def process_login(email, password, headers):
         for step in save_steps:
             animate_spinner(random.uniform(0.5, 0.8), step)
 
-        # Actually save the cookies
+        # Actually save the cookies with improved format
         save_cookies_json(cookies, json_path)
         save_cookies_string(cookies, string_path)
 
-        # Success card content
-        success_content = f"""AUTHENTICATION SUCCESSFUL
+        # Display cookie preview
+        try:
+            with open(json_path, "r") as f:
+                cookie_data = json.load(f)
+
+            # Count useful cookies
+            auth_cookies = [
+                c for c in cookie_data if c["key"] in ["c_user", "xs", "fr", "datr"]
+            ]
+            other_cookies = [
+                c for c in cookie_data if c["key"] not in ["c_user", "xs", "fr", "datr"]
+            ]
+
+            cookie_stats = f"""AUTHENTICATION SUCCESSFUL
+Session data saved to:
+→ {json_path} ({len(cookie_data)} cookies)
+→ {string_path}
+
+Authentication cookies: {len(auth_cookies)}
+Additional cookies: {len(other_cookies)}"""
+
+            # Display success card
+            print()
+            print(
+                Colors.box(
+                    cookie_stats,
+                    padding=1,
+                    border_color=Colors.SUCCESS,
+                    fill_color=Colors.BG_SUCCESS + Colors.BLACK,
+                )
+            )
+            print()
+
+        except Exception as e:
+            # Fallback to simple success message if preview fails
+            success_content = f"""AUTHENTICATION SUCCESSFUL
 Session data saved to:
 → {json_path}
 → {string_path}"""
 
-        # Display success card
-        print()
-        print(
-            Colors.box(
-                success_content,
-                padding=1,
-                border_color=Colors.SUCCESS,
-                fill_color=Colors.BG_SUCCESS + Colors.BLACK,
+            # Display success card
+            print()
+            print(
+                Colors.box(
+                    success_content,
+                    padding=1,
+                    border_color=Colors.SUCCESS,
+                    fill_color=Colors.BG_SUCCESS + Colors.BLACK,
+                )
             )
-        )
-        print()
+            print()
 
         return True
     else:
