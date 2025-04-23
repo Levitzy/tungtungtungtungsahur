@@ -14,43 +14,151 @@ from utils.cookie_manager import save_cookies_json, save_cookies_string
 from auth.login import facebook_login
 
 
-# Define Material Design 3 color palette (Light Theme)
+# Define Enhanced Material UI Color Scheme
 class Colors:
+    # Reset color
     RESET = "\033[0m"
-    PRIMARY = "\033[38;2;103;80;164m"  # Primary (Deep Purple)
-    ON_PRIMARY = "\033[38;2;255;255;255m"  # Text on primary (White)
-    SECONDARY = "\033[38;2;103;80;164m"  # Secondary (Light Purple, same as primary for light theme)
-    TERTIARY = "\033[38;2;125;82;96m"  # Tertiary (Mauve)
 
-    # Surface colors (Light theme)
-    SURFACE = "\033[38;2;28;27;31m"  # Surface (Dark text on light background)
-    SURFACE_VARIANT = "\033[38;2;73;69;79m"  # Surface variant
-    BACKGROUND = "\033[48;2;255;251;254m"  # Background (Light)
+    # Basic colors
+    BLACK = "\033[38;2;0;0;0m"
+    WHITE = "\033[38;2;255;255;255m"
 
-    # State colors
-    ERROR = "\033[38;2;179;38;30m"  # Error (Red)
-    SUCCESS = "\033[38;2;58;133;76m"  # Success (Green)
-    WARNING = "\033[38;2;236;94;0m"  # Warning (Orange)
-    INFO = "\033[38;2;26;115;232m"  # Info (Blue)
+    # Primary colors - Deep Indigo
+    PRIMARY_50 = "\033[38;2;232;234;246m"
+    PRIMARY_100 = "\033[38;2;197;202;233m"
+    PRIMARY_200 = "\033[38;2;159;168;218m"
+    PRIMARY_300 = "\033[38;2;121;134;203m"
+    PRIMARY_400 = "\033[38;2;92;107;192m"
+    PRIMARY_500 = "\033[38;2;63;81;181m"
+    PRIMARY_600 = "\033[38;2;57;73;171m"
+    PRIMARY_700 = "\033[38;2;48;63;159m"
+    PRIMARY_800 = "\033[38;2;40;53;147m"
+    PRIMARY_900 = "\033[38;2;26;35;126m"
 
-    # Text styling
+    # Secondary colors - Deep Purple
+    SECONDARY_300 = "\033[38;2;149;117;205m"
+    SECONDARY_500 = "\033[38;2;103;58;183m"
+    SECONDARY_700 = "\033[38;2;69;39;160m"
+
+    # Tertiary colors - Teal
+    TERTIARY_300 = "\033[38;2;77;182;172m"
+    TERTIARY_500 = "\033[38;2;0;150;136m"
+    TERTIARY_700 = "\033[38;2;0;121;107m"
+
+    # Status colors
+    SUCCESS = "\033[38;2;76;175;80m"
+    ERROR = "\033[38;2;211;47;47m"
+    WARNING = "\033[38;2;245;124;0m"
+    INFO = "\033[38;2;25;118;210m"
+
+    # Background colors
+    BG_PRIMARY_50 = "\033[48;2;232;234;246m"
+    BG_PRIMARY_100 = "\033[48;2;197;202;233m"
+    BG_PRIMARY_500 = "\033[48;2;63;81;181m"
+    BG_PRIMARY_700 = "\033[48;2;48;63;159m"
+    BG_PRIMARY_900 = "\033[48;2;26;35;126m"
+
+    BG_SECONDARY_500 = "\033[48;2;103;58;183m"
+    BG_TERTIARY_500 = "\033[48;2;0;150;136m"
+
+    BG_SUCCESS = "\033[48;2;76;175;80m"
+    BG_ERROR = "\033[48;2;211;47;47m"
+    BG_WARNING = "\033[48;2;245;124;0m"
+    BG_INFO = "\033[48;2;25;118;210m"
+
+    # Text modifiers
     BOLD = "\033[1m"
     DIM = "\033[2m"
     ITALIC = "\033[3m"
     UNDERLINE = "\033[4m"
-
-    # Background colors (Light theme)
-    BG_PRIMARY = "\033[48;2;232;222;248m"  # Primary container background
-    BG_SECONDARY = "\033[48;2;232;222;248m"  # Secondary container background
-    BG_TERTIARY = "\033[48;2;239;219;228m"  # Tertiary container background
-    BG_ERROR = "\033[48;2;242;184;181m"  # Error container background
-    BG_SUCCESS = "\033[48;2;183;225;195m"  # Success container background
-    BG_WARNING = "\033[48;2;251;177;125m"  # Warning container background
-    BG_INFO = "\033[48;2;212;227;252m"  # Info container background
+    BLINK = "\033[5m"
 
     @staticmethod
     def color_text(text, color):
+        """Apply color to text and reset after"""
         return f"{color}{text}{Colors.RESET}"
+
+    @staticmethod
+    def gradient_text(text, start_color, end_color):
+        """Create a simple gradient effect (only works with RGB colors)"""
+        if not text:
+            return ""
+
+        start_r, start_g, start_b = Colors._parse_rgb(start_color)
+        end_r, end_g, end_b = Colors._parse_rgb(end_color)
+
+        result = ""
+        for i, char in enumerate(text):
+            if char.isspace():
+                result += char
+                continue
+
+            # Calculate gradient position
+            ratio = i / (len(text) - 1) if len(text) > 1 else 0
+
+            # Interpolate RGB values
+            r = int(start_r + (end_r - start_r) * ratio)
+            g = int(start_g + (end_g - start_g) * ratio)
+            b = int(start_b + (end_b - start_b) * ratio)
+
+            # Create color code and add character
+            result += f"\033[38;2;{r};{g};{b}m{char}"
+
+        return result + Colors.RESET
+
+    @staticmethod
+    def _parse_rgb(color_code):
+        """Extract RGB values from ANSI color code"""
+        rgb_match = re.search(r"\033\[38;2;(\d+);(\d+);(\d+)m", color_code)
+        if rgb_match:
+            return (
+                int(rgb_match.group(1)),
+                int(rgb_match.group(2)),
+                int(rgb_match.group(3)),
+            )
+        return 255, 255, 255  # Default to white if not RGB
+
+    @staticmethod
+    def box(content, padding=1, border_color=None, fill_color=None):
+        """Create a box around content with optional padding and colors"""
+        lines = content.split("\n")
+        width = max(len(line) for line in lines)
+
+        result = []
+        border_color = border_color or Colors.PRIMARY_500
+        fill_color = fill_color or ""
+
+        # Top border
+        result.append(f"{border_color}╭{'─' * (width + padding * 2)}╮{Colors.RESET}")
+
+        # Empty lines for top padding
+        for _ in range(padding):
+            result.append(
+                f"{border_color}│{fill_color}{' ' * (width + padding * 2)}{Colors.RESET}{border_color}│{Colors.RESET}"
+            )
+
+        # Content lines
+        for line in lines:
+            padding_needed = width - len(line)
+            padded_line = line + " " * padding_needed
+            result.append(
+                f"{border_color}│{fill_color}{' ' * padding}{padded_line}{' ' * padding}{Colors.RESET}{border_color}│{Colors.RESET}"
+            )
+
+        # Empty lines for bottom padding
+        for _ in range(padding):
+            result.append(
+                f"{border_color}│{fill_color}{' ' * (width + padding * 2)}{Colors.RESET}{border_color}│{Colors.RESET}"
+            )
+
+        # Bottom border
+        result.append(f"{border_color}╰{'─' * (width + padding * 2)}╯{Colors.RESET}")
+
+        return "\n".join(result)
+
+
+# Import regex for color parsing
+import re
 
 
 def clear_screen():
@@ -58,73 +166,142 @@ def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def print_header():
-    """Print a stylish header"""
-    header_text = "Facebook Login Automation"
+def print_logo():
+    """Print a stylish animated logo"""
+    logo = """
+    ███████╗██████╗        ██╗      ██████╗  ██████╗ ██╗███╗   ██╗
+    ██╔════╝██╔══██╗       ██║     ██╔═══██╗██╔════╝ ██║████╗  ██║
+    █████╗  ██████╔╝       ██║     ██║   ██║██║  ███╗██║██╔██╗ ██║
+    ██╔══╝  ██╔══██╗       ██║     ██║   ██║██║   ██║██║██║╚██╗██║
+    ██║     ██████╔╝▄█╗    ███████╗╚██████╔╝╚██████╔╝██║██║ ╚████║
+    ╚═╝     ╚═════╝ ╚═╝    ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝╚═╝  ╚═══╝
+    """
 
-    print("\n")
-    print(Colors.color_text("╭─" + "─" * (len(header_text) + 8) + "─╮", Colors.PRIMARY))
+    frames = []
+    colors = [
+        Colors.PRIMARY_300,
+        Colors.PRIMARY_400,
+        Colors.PRIMARY_500,
+        Colors.PRIMARY_600,
+        Colors.PRIMARY_700,
+        Colors.SECONDARY_300,
+        Colors.SECONDARY_500,
+        Colors.SECONDARY_700,
+    ]
+
+    # Generate color sequence for animation
+    for color in colors:
+        frames.append(Colors.color_text(logo, color))
+
+    # Add gradient frames
+    frames.append(Colors.gradient_text(logo, Colors.PRIMARY_300, Colors.SECONDARY_700))
+    frames.append(Colors.gradient_text(logo, Colors.SECONDARY_700, Colors.PRIMARY_300))
+
+    # Animate the logo
+    for frame in frames:
+        clear_screen()
+        print(frame)
+
+        # Add a subtitle with a different animation
+        subtitle = "Advanced Authentication System"
+        padding = (len(logo.split("\n")[1]) - len(subtitle)) // 2
+        print(
+            " " * padding
+            + Colors.color_text(subtitle, Colors.TERTIARY_500 + Colors.BOLD)
+        )
+
+        time.sleep(0.15)
+
+    # Final logo with subtle animation
+    clear_screen()
+    print(Colors.gradient_text(logo, Colors.PRIMARY_500, Colors.SECONDARY_500))
+
+    # Add a static subtitle
+    subtitle = "Advanced Authentication System"
+    padding = (len(logo.split("\n")[1]) - len(subtitle)) // 2
     print(
-        Colors.color_text("│  ", Colors.PRIMARY)
-        + Colors.color_text(header_text, Colors.BOLD + Colors.PRIMARY)
-        + Colors.color_text("  │", Colors.PRIMARY)
+        " " * padding + Colors.color_text(subtitle, Colors.TERTIARY_500 + Colors.BOLD)
     )
-    print(Colors.color_text("╰─" + "─" * (len(header_text) + 8) + "─╯", Colors.PRIMARY))
+
     print("\n")
 
 
 def print_step(step_number, message):
-    """Print a step with Material Design styling"""
+    """Print a step with enhanced styling"""
+    step_indicator = f" {step_number} "
+
     print(
-        Colors.BG_PRIMARY
-        + Colors.color_text(f" {step_number} ", Colors.PRIMARY + Colors.BOLD)
+        Colors.BG_PRIMARY_700
+        + Colors.WHITE
+        + Colors.BOLD
+        + step_indicator
         + Colors.RESET
         + " "
-        + Colors.color_text(message, Colors.SURFACE)
+        + Colors.PRIMARY_500
+        + Colors.BOLD
+        + message
+        + Colors.RESET
     )
 
 
 def print_info(message):
-    """Print information message with Material Design styling"""
+    """Print information message with enhanced styling"""
     print(
         Colors.BG_INFO
-        + Colors.color_text(" i ", Colors.INFO + Colors.BOLD)
+        + Colors.WHITE
+        + Colors.BOLD
+        + " i "
         + Colors.RESET
         + " "
-        + Colors.color_text(message, Colors.SURFACE)
+        + Colors.INFO
+        + message
+        + Colors.RESET
     )
 
 
 def print_success(message):
-    """Print success message with Material Design styling"""
+    """Print success message with enhanced styling"""
     print(
         Colors.BG_SUCCESS
-        + Colors.color_text(" ✓ ", Colors.SUCCESS + Colors.BOLD)
+        + Colors.WHITE
+        + Colors.BOLD
+        + " ✓ "
         + Colors.RESET
         + " "
-        + Colors.color_text(message, Colors.SUCCESS)
+        + Colors.SUCCESS
+        + Colors.BOLD
+        + message
+        + Colors.RESET
     )
 
 
 def print_error(message):
-    """Print error message with Material Design styling"""
+    """Print error message with enhanced styling"""
     print(
         Colors.BG_ERROR
-        + Colors.color_text(" ! ", Colors.ERROR + Colors.BOLD)
+        + Colors.WHITE
+        + Colors.BOLD
+        + " ! "
         + Colors.RESET
         + " "
-        + Colors.color_text(message, Colors.ERROR)
+        + Colors.ERROR
+        + message
+        + Colors.RESET
     )
 
 
 def print_warning(message):
-    """Print warning message with Material Design styling"""
+    """Print warning message with enhanced styling"""
     print(
         Colors.BG_WARNING
-        + Colors.color_text(" ⚠ ", Colors.WARNING + Colors.BOLD)
+        + Colors.BLACK
+        + Colors.BOLD
+        + " ⚠ "
         + Colors.RESET
         + " "
-        + Colors.color_text(message, Colors.WARNING)
+        + Colors.WARNING
+        + message
+        + Colors.RESET
     )
 
 
@@ -135,7 +312,9 @@ def animate_spinner(duration, message, frames="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"):
 
     while time.time() - start_time < duration:
         frame = frames[i % len(frames)]
-        sys.stdout.write(f"\r{Colors.color_text(frame, Colors.PRIMARY)} {message}")
+        sys.stdout.write(
+            f"\r{Colors.color_text(frame, Colors.PRIMARY_500)} {Colors.color_text(message, Colors.PRIMARY_300)}"
+        )
         sys.stdout.flush()
         time.sleep(0.1)
         i += 1
@@ -147,28 +326,81 @@ def animate_spinner(duration, message, frames="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"):
     sys.stdout.flush()
 
 
+def animate_progress_bar(duration, message, width=30):
+    """Display an animated progress bar for the given duration"""
+    start_time = time.time()
+    end_time = start_time + duration
+
+    while time.time() < end_time:
+        elapsed = time.time() - start_time
+        progress = min(1.0, elapsed / duration)
+
+        # Calculate bar segments
+        filled_length = int(width * progress)
+        empty_length = width - filled_length
+
+        # Create progress bar with gradient
+        if filled_length > 0:
+            filled_bar = Colors.BG_PRIMARY_500 + " " * filled_length + Colors.RESET
+        else:
+            filled_bar = ""
+
+        empty_bar = " " * empty_length
+
+        # Calculate percentage
+        percent = int(progress * 100)
+
+        # Print progress bar
+        sys.stdout.write(
+            f"\r{Colors.PRIMARY_500}{message} [{filled_bar}{empty_bar}] {percent}%{Colors.RESET}"
+        )
+        sys.stdout.flush()
+
+        time.sleep(0.05)
+
+    # Complete the progress bar
+    filled_bar = Colors.BG_PRIMARY_500 + " " * width + Colors.RESET
+    sys.stdout.write(
+        f"\r{Colors.PRIMARY_500}{message} [{filled_bar}] 100%{Colors.RESET}"
+    )
+    sys.stdout.flush()
+    print()
+
+
 def prepare_environment():
     """Prepare system environment before login attempt"""
     print_step("1", "Preparing Environment & Security Measures")
 
     # Simulate checking system configuration
     steps = [
-        {"message": "Performing network security check...", "frames": "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"},
-        {"message": "Analyzing connection profile...", "frames": "▁▂▃▄▅▆▇█▇▆▅▄▃▂▁"},
-        {"message": "Setting up device fingerprint...", "frames": "▉▊▋▌▍▎▏▎▍▌▋▊▉"},
-        {"message": "Configuring browser emulation...", "frames": "←↖↑↗→↘↓↙"},
-        {"message": "Establishing secure channel...", "frames": "⬒⬓⬔⬕⬖⬗⬘⬙⬒"},
+        {
+            "message": "Performing network security check...",
+            "duration": random.uniform(0.7, 1.2),
+        },
+        {
+            "message": "Analyzing connection profile...",
+            "duration": random.uniform(0.5, 0.9),
+        },
+        {
+            "message": "Setting up device fingerprint...",
+            "duration": random.uniform(0.8, 1.3),
+        },
+        {
+            "message": "Configuring browser emulation...",
+            "duration": random.uniform(0.6, 1.0),
+        },
+        {
+            "message": "Establishing secure channel...",
+            "duration": random.uniform(0.7, 1.1),
+        },
     ]
 
     for step in steps:
-        animate_spinner(random.uniform(0.6, 1.3), step["message"], step["frames"])
-
-    # Generate randomized device name and details
-    system_info = platform.uname()
-    system_type = system_info.system
+        animate_progress_bar(step["duration"], step["message"])
 
     # Show session preparation complete
     print_success("Environment preparation complete")
+    print()
 
 
 def display_session_info(email, user_agent):
@@ -194,67 +426,61 @@ def display_session_info(email, user_agent):
     # Generate timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Display lovely session card
-    print("\n")
-    print(Colors.BG_PRIMARY + " " * 50 + Colors.RESET)
+    # Create session card content
+    card_content = f"""SESSION INFORMATION
+Device:     {device_name}
+Account:    {email}
+Session ID: {session_id}
+Timestamp:  {timestamp}"""
+
+    # Display card with styling
     print(
-        Colors.BG_PRIMARY
-        + "  "
-        + Colors.color_text("SESSION INFORMATION", Colors.PRIMARY + Colors.BOLD)
-        + " " * 30
-        + Colors.RESET
+        Colors.box(
+            card_content,
+            padding=1,
+            border_color=Colors.PRIMARY_500,
+            fill_color=Colors.BG_PRIMARY_50,
+        )
     )
-    print(Colors.BG_PRIMARY + " " * 50 + Colors.RESET)
-    print(
-        Colors.BG_PRIMARY
-        + "  "
-        + Colors.color_text("Device:", Colors.PRIMARY)
-        + " "
-        + Colors.color_text(device_name, Colors.SURFACE)
-        + " " * (45 - len(device_name))
-        + Colors.RESET
-    )
-    print(
-        Colors.BG_PRIMARY
-        + "  "
-        + Colors.color_text("Account:", Colors.PRIMARY)
-        + " "
-        + Colors.color_text(email, Colors.SURFACE)
-        + " " * (45 - len(email))
-        + Colors.RESET
-    )
-    print(
-        Colors.BG_PRIMARY
-        + "  "
-        + Colors.color_text("Session ID:", Colors.PRIMARY)
-        + " "
-        + Colors.color_text(session_id, Colors.SURFACE)
-        + " " * (45 - len(session_id))
-        + Colors.RESET
-    )
-    print(
-        Colors.BG_PRIMARY
-        + "  "
-        + Colors.color_text("Timestamp:", Colors.PRIMARY)
-        + " "
-        + Colors.color_text(timestamp, Colors.SURFACE)
-        + " " * (45 - len(timestamp))
-        + Colors.RESET
-    )
-    print(Colors.BG_PRIMARY + " " * 50 + Colors.RESET)
-    print("\n")
+    print()
 
 
 def process_login(email, password, headers):
     """Process login with enhanced security and UI"""
     print_step("2", "Initiating Advanced Authentication Process")
-    print_info("Using stealth login technology with multiple fallbacks")
+    print_info("Using advanced login technology with multiple fallbacks")
+    print()
 
-    # Perform login
+    # Show method list
+    method_list = [
+        "Mobile Stealth Login",
+        "Desktop Standard Login",
+        "API-Based Authentication",
+        "Graph API Authentication",
+        "Alternative Mobile Login",
+        "Alternative Desktop Login",
+    ]
+
+    print(
+        Colors.color_text(
+            "Available Authentication Methods:", Colors.PRIMARY_500 + Colors.BOLD
+        )
+    )
+    for i, method in enumerate(method_list, 1):
+        print(
+            f"  {Colors.color_text(str(i), Colors.PRIMARY_500)} {Colors.color_text(method, Colors.PRIMARY_300)}"
+        )
+    print()
+
+    # Perform login with animated progress
+    animate_spinner(1.5, "Initializing authentication processor...")
+    print()
+
     session, cookies = facebook_login(email, password, headers)
 
     if session:
         print_success("Authentication completed successfully!")
+        print()
 
         print_step("3", "Saving Session Data")
 
@@ -283,63 +509,29 @@ def process_login(email, password, headers):
         save_cookies_json(cookies, json_path)
         save_cookies_string(cookies, string_path)
 
-        # Success card
-        print("\n")
-        print(Colors.BG_SUCCESS + " " * 50 + Colors.RESET)
+        # Success card content
+        success_content = f"""AUTHENTICATION SUCCESSFUL
+Session data saved to:
+→ {json_path}
+→ {string_path}"""
+
+        # Display success card
+        print()
         print(
-            Colors.BG_SUCCESS
-            + "  "
-            + Colors.color_text(
-                "AUTHENTICATION SUCCESSFUL", Colors.SUCCESS + Colors.BOLD
+            Colors.box(
+                success_content,
+                padding=1,
+                border_color=Colors.SUCCESS,
+                fill_color=Colors.BG_SUCCESS + Colors.BLACK,
             )
-            + " " * 25
-            + Colors.RESET
         )
-        print(Colors.BG_SUCCESS + " " * 50 + Colors.RESET)
-        print(
-            Colors.BG_SUCCESS
-            + "  "
-            + Colors.color_text("Session data saved to:", Colors.SUCCESS)
-            + " " * 27
-            + Colors.RESET
-        )
-        print(
-            Colors.BG_SUCCESS
-            + "  "
-            + Colors.color_text("→", Colors.SUCCESS)
-            + " "
-            + Colors.color_text(json_path, Colors.SUCCESS)
-            + " " * (46 - len(json_path))
-            + Colors.RESET
-        )
-        print(
-            Colors.BG_SUCCESS
-            + "  "
-            + Colors.color_text("→", Colors.SUCCESS)
-            + " "
-            + Colors.color_text(string_path, Colors.SUCCESS)
-            + " " * (46 - len(string_path))
-            + Colors.RESET
-        )
-        print(Colors.BG_SUCCESS + " " * 50 + Colors.RESET)
-        print("\n")
+        print()
 
         return True
     else:
         print_error("Login process failed despite multiple attempts")
 
-        # Show error card with troubleshooting tips
-        print("\n")
-        print(Colors.BG_ERROR + " " * 50 + Colors.RESET)
-        print(
-            Colors.BG_ERROR
-            + "  "
-            + Colors.color_text("AUTHENTICATION FAILED", Colors.ERROR + Colors.BOLD)
-            + " " * 30
-            + Colors.RESET
-        )
-        print(Colors.BG_ERROR + " " * 50 + Colors.RESET)
-
+        # Error card with troubleshooting tips
         troubleshooting_tips = [
             "Verify your credentials in config/credentials.py",
             "Manually log in via browser to confirm account status",
@@ -351,30 +543,33 @@ def process_login(email, password, headers):
             "Ensure you're not on a shared/VPN IP that's blocked",
         ]
 
-        for tip in troubleshooting_tips:
-            print(
-                Colors.BG_ERROR
-                + "  "
-                + Colors.color_text("•", Colors.ERROR)
-                + " "
-                + Colors.color_text(tip, Colors.ERROR)
-                + " " * max(0, (46 - len(tip)))
-                + Colors.RESET
-            )
+        tips_formatted = "AUTHENTICATION FAILED\n\n" + "\n".join(
+            [f"• {tip}" for tip in troubleshooting_tips]
+        )
 
-        print(Colors.BG_ERROR + " " * 50 + Colors.RESET)
-        print("\n")
+        # Display error card
+        print()
+        print(
+            Colors.box(
+                tips_formatted,
+                padding=1,
+                border_color=Colors.ERROR,
+                fill_color=Colors.BG_ERROR + Colors.WHITE,
+            )
+        )
+        print()
 
         return False
 
 
 def main():
-    """Main entry point for Facebook login automation with Material Design UI"""
+    """Main entry point for Facebook login automation with enhanced UI"""
     # Clear screen
     clear_screen()
 
-    # Show header
-    print_header()
+    # Show animated logo
+    print_logo()
+    time.sleep(1)
 
     # Prepare system environment
     prepare_environment()
