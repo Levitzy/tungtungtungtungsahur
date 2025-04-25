@@ -1,4 +1,4 @@
 #!/usr/bin/env python3
 
-EMAIL = "entitled.guppy.ubrg@letterhaven.net"
-PASSWORD = "pI@),/TX34/p"
+EMAIL = "decent.raven.uqxe@letterhaven.net"
+PASSWORD = "N?3L|?cEw=oI"
