@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load sessions list
     loadSessions();
+    setupExportButtons();
     
     // Set up logout button
     if (logoutButton) {
@@ -107,6 +108,126 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
+
+    /**
+ * Set up export buttons with the proper IDs
+ */
+function setupExportButtons() {
+    // Add event listeners to export buttons with proper IDs
+    document.getElementById('export-json-btn').addEventListener('click', function() {
+        exportCookies('json');
+    });
+    
+    document.getElementById('export-text-btn').addEventListener('click', function() {
+        exportCookies('string');
+    });
+    
+    document.getElementById('export-netscape-btn').addEventListener('click', function() {
+        exportCookies('netscape');
+    });
+}
+
+/**
+ * Export cookies in the specified format
+ * @param {string} format - Format type (json, string, netscape)
+ */
+function exportCookies(format) {
+    // Get the session ID from local storage
+    const sessionId = localStorage.getItem('fb_auth_session_id');
+    
+    if (!sessionId) {
+        Swal.fire({
+            title: 'Error',
+            text: 'No active session found. Please log in again.',
+            icon: 'error',
+            confirmButtonColor: '#4f46e5'
+        });
+        return;
+    }
+    
+    // Display loading indicator
+    Swal.fire({
+        title: 'Exporting Cookies',
+        text: 'Please wait...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // Build the export URL with the format parameter
+    const exportUrl = `/api/cookies/${sessionId}/export?format=${format}`;
+    
+    // Fetch the export data
+    fetch(exportUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+            }
+            
+            const contentType = response.headers.get('content-type');
+            
+            // Parse response based on content type
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            } else {
+                return response.text();
+            }
+        })
+        .then(data => {
+            // Format the filename with date for uniqueness
+            const date = new Date().toISOString().split('T')[0];
+            const filename = `fb_cookies_${format}_${date}.${format === 'json' ? 'json' : 'txt'}`;
+            
+            // Convert data to proper format for download
+            let content;
+            if (typeof data === 'object') {
+                content = JSON.stringify(data, null, 3);
+            } else {
+                content = data;
+            }
+            
+            // Create blob and download link
+            const blob = new Blob([content], {
+                type: format === 'json' ? 'application/json' : 'text/plain'
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            
+            // Add to document, trigger click, and clean up
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                // Show success message
+                Swal.fire({
+                    title: 'Export Successful',
+                    text: `Cookies exported in ${format.toUpperCase()} format as ${filename}`,
+                    icon: 'success',
+                    confirmButtonColor: '#4f46e5'
+                });
+            }, 100);
+        })
+        .catch(error => {
+            console.error('Error exporting cookies:', error);
+            
+            // Show error message
+            Swal.fire({
+                title: 'Export Failed',
+                text: `An error occurred while exporting cookies: ${error.message}`,
+                icon: 'error',
+                confirmButtonColor: '#4f46e5'
+            });
+        });
+}
     
     /**
      * Handle invalid or expired session
@@ -287,8 +408,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Generate table rows
         const rows = cookies.map(cookie => {
-            const isEssential = essentialCookies.includes(cookie.name);
-            const cookieType = getCookieType(cookie.name);
+            // Use key if available, otherwise fall back to name
+            const cookieName = cookie.key || cookie.name;
+            const isEssential = essentialCookies.includes(cookieName);
+            const cookieType = getCookieType(cookieName);
             
             // Truncate long cookie values
             let cookieValue = cookie.value;
@@ -300,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tr>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
-                            <span class="text-sm font-medium ${isEssential ? 'text-indigo-600 font-semibold' : 'text-gray-900'}">${cookie.name}</span>
+                            <span class="text-sm font-medium ${isEssential ? 'text-indigo-600 font-semibold' : 'text-gray-900'}">${cookieName}</span>
                             ${isEssential ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">Essential</span>' : ''}
                         </div>
                     </td>
@@ -324,27 +447,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update table
         cookiesTableBody.innerHTML = rows;
-    }
-    
-    /**
-     * Get the cookie type based on its name
-     * @param {string} name - Cookie name
-     * @returns {string} - Cookie type
-     */
-    function getCookieType(name) {
-        const authCookies = ['c_user', 'xs', 'sb', 'datr'];
-        const functionalCookies = ['locale', 'wd', 'dpr', 'presence'];
-        const trackerCookies = ['fr', 'm_pixel_ratio', '_fbp'];
-        
-        if (authCookies.includes(name)) {
-            return 'Authentication';
-        } else if (functionalCookies.includes(name)) {
-            return 'Functional';
-        } else if (trackerCookies.includes(name)) {
-            return 'Tracking';
-        } else {
-            return 'Other';
-        }
     }
     
     /**

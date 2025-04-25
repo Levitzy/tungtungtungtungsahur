@@ -213,7 +213,6 @@ def get_cookies(session_id):
         )
 
 
-# Export cookies in different formats
 @app.route("/api/cookies/<session_id>/export", methods=["GET"])
 def export_cookies(session_id):
     """Export cookies in requested format"""
@@ -228,13 +227,35 @@ def export_cookies(session_id):
 
     cookies = session_data["cookies"]
 
+    # Format cookies properly
+    formatted_cookies = []
+    now = datetime.now().isoformat() + "Z"
+
+    for cookie in cookies:
+        # Create new cookie entry with proper format
+        cookie_entry = {
+            "key": cookie.get("name", cookie.get("key", "")),
+            "value": cookie.get("value", ""),
+            "domain": cookie.get("domain", "facebook.com"),
+            "path": cookie.get("path", "/"),
+            "hostOnly": cookie.get("hostOnly", False),
+            "creation": cookie.get("creation", now),
+            "lastAccessed": cookie.get("lastAccessed", now),
+        }
+        formatted_cookies.append(cookie_entry)
+
     if format_type == "json":
-        return jsonify({"success": True, "cookies": cookies})
+        # Return direct JSON array without success wrapper
+        return (
+            json.dumps(formatted_cookies, indent=3),
+            200,
+            {"Content-Type": "application/json"},
+        )
 
     elif format_type == "netscape":
         # Netscape format (for browsers)
         netscape_cookies = []
-        for cookie in cookies:
+        for cookie in formatted_cookies:
             domain = cookie.get("domain", ".facebook.com")
             if not domain.startswith("."):
                 domain = "." + domain
@@ -242,7 +263,7 @@ def export_cookies(session_id):
             path = cookie.get("path", "/")
             secure = "TRUE"
             expiry = int(time.time()) + 86400 * 30  # 30 days
-            name = cookie.get("name", "")
+            name = cookie.get("key", "")
             value = cookie.get("value", "")
 
             netscape_cookies.append(
@@ -254,7 +275,9 @@ def export_cookies(session_id):
 
     elif format_type == "string":
         # Simple cookie string format
-        cookie_str = "; ".join([f"{c.get('name')}={c.get('value')}" for c in cookies])
+        cookie_str = "; ".join(
+            [f"{c.get('key')}={c.get('value')}" for c in formatted_cookies]
+        )
         return cookie_str, 200, {"Content-Type": "text/plain"}
 
     else:
