@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FB Login System</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex flex-col">
+        <!-- Navbar -->
+        <nav class="bg-indigo-600 shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <i class="fas fa-lock-open text-white text-2xl mr-2"></i>
+                            <span class="text-white font-bold text-xl">FB Auth System</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <a href="#" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                            <i class="fas fa-info-circle mr-1"></i> About
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Left Column - Login Form -->
+                    <div class="md:col-span-2">
+                        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                            <div class="p-6">
+                                <div class="text-center mb-6">
+                                    <h1 class="text-2xl font-bold text-gray-800">Advanced Authentication System</h1>
+                                    <p class="text-gray-600">Securely connect to your account with multiple fallback methods</p>
+                                </div>
+                                
+                                <div id="login-container">
+                                    <form id="login-form" class="space-y-4">
+                                        <div class="form-group">
+                                            <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                                            <div class="mt-1 relative rounded-md shadow-sm">
+                                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <i class="fas fa-envelope text-gray-400"></i>
+                                                </div>
+                                                <input type="email" id="email" name="email" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md py-2 px-3 border" placeholder="Email Address" required>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                                            <div class="mt-1 relative rounded-md shadow-sm">
+                                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <i class="fas fa-lock text-gray-400"></i>
+                                                </div>
+                                                <input type="password" id="password" name="password" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md py-2 px-3 border" placeholder="Password" required>
+                                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                                    <i class="fas fa-eye text-gray-400 cursor-pointer toggle-password"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                                <label for="remember-me" class="ml-2 block text-sm text-gray-700">Remember me</label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div>
+                                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                                <span class="login-text">Login</span>
+                                                <span class="login-spinner hidden">
+                                                    <i class="fas fa-spinner fa-spin mr-2"></i> Authenticating...
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </form>
+                                    
+                                    <!-- Login Status -->
+                                    <div id="login-status" class="mt-4 hidden">
+                                        <!-- Will be filled dynamically -->
+                                    </div>
+                                </div>
+                                
+                                <!-- Login Progress -->
+                                <div id="login-progress" class="mt-6 hidden">
+                                    <h3 class="text-lg font-medium text-gray-800 mb-3">Authentication Progress</h3>
+                                    <div class="space-y-4">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                <i class="fas fa-shield-alt text-indigo-600"></i>
+                                            </div>
+                                            <div class="ml-4">
+                                                <h4 class="text-sm font-medium text-gray-700">Preparing Environment</h4>
+                                                <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
+                                                    <div id="progress-1" class="bg-indigo-600 h-2 rounded-full" style="width: 0%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                <i class="fas fa-key text-indigo-600"></i>
+                                            </div>
+                                            <div class="ml-4">
+                                                <h4 class="text-sm font-medium text-gray-700">Authentication Process</h4>
+                                                <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
+                                                    <div id="progress-2" class="bg-indigo-600 h-2 rounded-full" style="width: 0%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                <i class="fas fa-cookie text-indigo-600"></i>
+                                            </div>
+                                            <div class="ml-4">
+                                                <h4 class="text-sm font-medium text-gray-700">Session Creation</h4>
+                                                <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
+                                                    <div id="progress-3" class="bg-indigo-600 h-2 rounded-full" style="width: 0%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column - Info Card -->
+                    <div class="md:col-span-1">
+                        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-4">
+                                <h2 class="text-white text-lg font-bold">System Features</h2>
+                            </div>
+                            <div class="p-4 space-y-3">
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-gray-700 text-sm">Multiple authentication methods with automatic fallback</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-gray-700 text-sm">Advanced session management with persistent storage</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-gray-700 text-sm">Secure cookie handling and export in multiple formats</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-gray-700 text-sm">Comprehensive dashboard with session analytics</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-gray-700 text-sm">Detailed logging and error handling</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="text-sm">
+                                        <span class="font-medium text-gray-500">System Status:</span>
+                                        <span class="ml-1 font-medium text-green-500">Online</span>
+                                    </div>
+                                    <div>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <i class="fas fa-circle text-xs mr-1"></i> Active
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Activity Card -->
+                        <div class="bg-white shadow-md rounded-lg overflow-hidden mt-4">
+                            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-4">
+                                <h2 class="text-white text-lg font-bold">Recent Activity</h2>
+                            </div>
+                            <div class="p-4">
+                                <div class="space-y-3">
+                                    <div class="flex items-start">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-user-shield text-indigo-500"></i>
+                                        </div>
+                                        <div class="ml-3">
+                                            <p class="text-gray-700 text-sm">System updated to version 1.2.4</p>
+                                            <p class="text-gray-500 text-xs">Today, 09:45 AM</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-server text-indigo-500"></i>
+                                        </div>
+                                        <div class="ml-3">
+                                            <p class="text-gray-700 text-sm">Server maintenance completed</p>
+                                            <p class="text-gray-500 text-xs">Yesterday, 11:30 PM</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-shield-alt text-indigo-500"></i>
+                                        </div>
+                                        <div class="ml-3">
+                                            <p class="text-gray-700 text-sm">Security patches applied</p>
+                                            <p class="text-gray-500 text-xs">Apr 22, 2025</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-white py-6">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="md:flex md:items-center md:justify-between">
+                    <div class="flex justify-center md:order-2 space-x-6">
+                        <a href="#" class="text-gray-400 hover:text-gray-300">
+                            <i class="fab fa-github"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-gray-300">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-gray-300">
+                            <i class="fab fa-linkedin"></i>
+                        </a>
+                    </div>
+                    <div class="mt-8 md:mt-0 md:order-1">
+                        <p class="text-center text-gray-400">&copy; 2025 FB Auth System. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Sweet Alert for better notifications -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Custom JS -->
+    <script src="/static/js/script.js"></script>
+</body>
+</html>

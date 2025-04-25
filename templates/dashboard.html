@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FB Auth System</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex flex-col">
+        <!-- Navbar -->
+        <nav class="bg-indigo-600 shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <i class="fas fa-lock text-white text-2xl mr-2"></i>
+                            <span class="text-white font-bold text-xl">FB Auth System</span>
+                        </div>
+                        <div class="hidden md:ml-6 md:flex md:items-center md:space-x-4">
+                            <a href="#dashboard-section" class="bg-indigo-700 text-white px-3 py-2 rounded-md text-sm font-medium" aria-current="page">Dashboard</a>
+                            <a href="#sessions-section" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Sessions</a>
+                            <a href="#cookies-section" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Cookies</a>
+                            <a href="#settings-section" class="text-gray-300 hover:bg-indigo-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Settings</a>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="hidden md:block">
+                            <div class="ml-4 flex items-center md:ml-6">
+                                <button type="button" class="bg-indigo-600 p-1 rounded-full text-gray-200 hover:text-white focus:outline-none">
+                                    <i class="fas fa-bell"></i>
+                                </button>
+                                
+                                <!-- Profile dropdown -->
+                                <div class="ml-3 relative group">
+                                    <div>
+                                        <button type="button" class="max-w-xs bg-indigo-600 rounded-full flex items-center text-sm focus:outline-none" id="user-menu-button">
+                                            <span class="sr-only">Open user menu</span>
+                                            <div class="h-8 w-8 rounded-full bg-indigo-700 flex items-center justify-center text-white font-bold" id="user-initial">
+                                                U
+                                            </div>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden group-hover:block" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1">
+                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Your Profile</a>
+                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Settings</a>
+                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Sign out</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mobile menu button -->
+                        <div class="flex md:hidden">
+                            <button type="button" class="bg-indigo-600 inline-flex items-center justify-center p-2 rounded-md text-white hover:text-white hover:bg-indigo-700 focus:outline-none" aria-controls="mobile-menu" aria-expanded="false">
+                                <span class="sr-only">Open main menu</span>
+                                <i class="fas fa-bars"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mobile menu, show/hide based on menu state -->
+            <div class="md:hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1">
+                    <a href="#dashboard-section" class="bg-indigo-700 text-white block px-3 py-2 rounded-md text-base font-medium">Dashboard</a>
+                    <a href="#sessions-section" class="text-gray-300 hover:bg-indigo-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Sessions</a>
+                    <a href="#cookies-section" class="text-gray-300 hover:bg-indigo-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Cookies</a>
+                    <a href="#settings-section" class="text-gray-300 hover:bg-indigo-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Settings</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <!-- Session Info Banner -->
+                <div class="bg-white shadow-md rounded-lg overflow-hidden mb-6">
+                    <div class="p-4 flex flex-wrap items-center justify-between">
+                        <div class="flex items-center mb-2 md:mb-0">
+                            <div class="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
+                                <i class="fas fa-user text-indigo-600 text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h2 class="text-lg font-medium text-gray-900" id="session-email">user@example.com</h2>
+                                <p class="text-sm text-gray-500" id="session-id">Session ID: Loading...</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                Refresh Session
+                            </button>
+                            <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="logout-button">
+                                <i class="fas fa-sign-out-alt mr-2"></i>
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dashboard Section -->
+                <section id="dashboard-section">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Dashboard</h2>
+                    
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <!-- Active Session Card -->
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+                                        <i class="fas fa-user-shield text-white text-xl"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Active Session</dt>
+                                            <dd>
+                                                <div class="text-lg font-medium text-gray-900" id="active-session-count">1</div>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-5 py-3">
+                                <div class="text-sm">
+                                    <a href="#sessions-section" class="font-medium text-indigo-600 hover:text-indigo-500">View all sessions</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Session Age Card -->
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+                                        <i class="fas fa-clock text-white text-xl"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Session Age</dt>
+                                            <dd>
+                                                <div class="text-lg font-medium text-gray-900" id="session-age">Just created</div>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-5 py-3">
+                                <div class="text-sm">
+                                    <a href="#" class="font-medium text-green-600 hover:text-green-500">Session details</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Cookies Count Card -->
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-yellow-500 rounded-md p-3">
+                                        <i class="fas fa-cookie text-white text-xl"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Active Cookies</dt>
+                                            <dd>
+                                                <div class="text-lg font-medium text-gray-900" id="cookies-count">Loading...</div>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-5 py-3">
+                                <div class="text-sm">
+                                    <a href="#cookies-section" class="font-medium text-yellow-600 hover:text-yellow-500">View cookies</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Login Method Card -->
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-purple-500 rounded-md p-3">
+                                        <i class="fas fa-key text-white text-xl"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Login Method</dt>
+                                            <dd>
+                                                <div class="text-lg font-medium text-gray-900" id="login-method">API Authentication</div>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-5 py-3">
+                                <div class="text-sm">
+                                    <a href="#" class="font-medium text-purple-600 hover:text-purple-500">View details</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Session Health & Activity Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <!-- Session Health Chart -->
+                        <div class="bg-white shadow rounded-lg p-4">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Session Health</h3>
+                            <canvas id="sessionHealthChart" height="200"></canvas>
+                        </div>
+                        
+                        <!-- Activity Timeline Chart -->
+                        <div class="bg-white shadow rounded-lg p-4">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Activity Timeline</h3>
+                            <canvas id="activityChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Sessions Section -->
+                <section id="sessions-section" class="mt-10">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Session Management</h2>
+                    
+                    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                        <div class="p-4">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                                <h3 class="text-lg font-medium text-gray-900">Active Sessions</h3>
+                                <div class="mt-2 md:mt-0">
+                                    <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                                        <i class="fas fa-plus mr-2"></i>
+                                        Create New Session
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Sessions Table -->
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session ID</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Used</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200" id="sessions-table-body">
+                                        <!-- Sessions will be loaded dynamically -->
+                                        <tr>
+                                            <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                                <i class="fas fa-spinner fa-spin mr-2"></i> Loading sessions...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Cookies Section -->
+                <section id="cookies-section" class="mt-10">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Cookie Management</h2>
+                    
+                    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                        <div class="p-4">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                                <h3 class="text-lg font-medium text-gray-900">Current Session Cookies</h3>
+                                <div class="mt-2 md:mt-0 space-x-2">
+                                    <button class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                                        <i class="fas fa-file-export mr-2"></i>
+                                        Export JSON
+                                    </button>
+                                    <button class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                                        <i class="fas fa-file-alt mr-2"></i>
+                                        Export Text
+                                    </button>
+                                    <button class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                                        <i class="fas fa-file-code mr-2"></i>
+                                        Export Netscape
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Cookies Table -->
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Domain</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Path</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200" id="cookies-table-body">
+                                        <!-- Cookies will be loaded dynamically -->
+                                        <tr>
+                                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                                                <i class="fas fa-spinner fa-spin mr-2"></i> Loading cookies...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Settings Section -->
+                <section id="settings-section" class="mt-10">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Settings</h2>
+                    
+                    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                        <div class="p-4">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Session Preferences</h3>
+                            
+                            <div class="space-y-4">
+                                <!-- Auto-refresh Toggle -->
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="text-sm font-medium text-gray-900">Auto-refresh Sessions</h4>
+                                        <p class="text-sm text-gray-500">Automatically refresh sessions to keep them active</p>
+                                    </div>
+                                    <button type="button" class="relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none bg-indigo-600" role="switch" aria-checked="true">
+                                        <span aria-hidden="true" class="translate-x-5 pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200"></span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Session Timeout -->
+                                <div>
+                                    <h4 class="text-sm font-medium text-gray-900 mb-1">Session Timeout (minutes)</h4>
+                                    <div class="mt-1 flex rounded-md shadow-sm">
+                                        <input type="number" min="5" max="1440" value="30" class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-md sm:text-sm border-gray-300">
+                                    </div>
+                                </div>
+                                
+                                <!-- User Agent Selection -->
+                                <div>
+                                    <h4 class="text-sm font-medium text-gray-900 mb-1">Default User Agent</h4>
+                                    <select class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                        <option value="random">Random (recommended)</option>
+                                        <option value="mobile">Mobile Device</option>
+                                        <option value="desktop">Desktop Browser</option>
+                                        <option value="custom">Custom...</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Login Method Preference -->
+                                <div>
+                                    <h4 class="text-sm font-medium text-gray-900 mb-1">Preferred Login Method</h4>
+                                    <select class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                        <option value="auto">Auto (try all methods)</option>
+                                        <option value="auto">Auto (try all methods)</option>
+                                        <option value="api">API Authentication</option>
+                                        <option value="mobile">Mobile Login</option>
+                                        <option value="desktop">Desktop Login</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Save Settings Button -->
+                                <div class="pt-4">
+                                    <button type="button" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                        <i class="fas fa-save mr-2"></i>
+                                        Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-white py-4">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="md:flex md:items-center md:justify-between">
+                    <div class="flex justify-center md:order-2 space-x-6">
+                        <a href="#" class="text-gray-400 hover:text-gray-300">
+                            <i class="fab fa-github"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-gray-300">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-gray-300">
+                            <i class="fab fa-linkedin"></i>
+                        </a>
+                    </div>
+                    <div class="mt-8 md:mt-0 md:order-1">
+                        <p class="text-center text-gray-400">&copy; 2025 FB Auth System. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Sweet Alert for better notifications -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Moment.js for time formatting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

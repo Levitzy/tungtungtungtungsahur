@@ -1,0 +1,223 @@
+/* Custom styles for the Facebook Authentication System */
+
+/* Smooth scrolling for better UX */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Remove transitions when user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Apply animations to elements */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.slide-up {
+    animation: slideInUp 0.5s ease-out;
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* Login form enhancements */
+.form-group {
+    position: relative;
+}
+
+.form-group input {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-group input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Toggle password visibility button */
+.toggle-password {
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.toggle-password:hover {
+    color: #4f46e5 !important;
+}
+
+/* Custom button styles */
+.btn-primary-gradient {
+    background-image: linear-gradient(to right, #4f46e5, #7c3aed);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-primary-gradient:hover {
+    background-image: linear-gradient(to right, #4338ca, #6d28d9);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Login status styling */
+.status-success {
+    border-left: 4px solid #10b981;
+    background-color: #ecfdf5;
+}
+
+.status-error {
+    border-left: 4px solid #ef4444;
+    background-color: #fef2f2;
+}
+
+.status-warning {
+    border-left: 4px solid #f59e0b;
+    background-color: #fffbeb;
+}
+
+.status-info {
+    border-left: 4px solid #3b82f6;
+    background-color: #eff6ff;
+}
+
+/* Better table styles */
+.table-hover tbody tr:hover {
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+.table-rounded {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Card hover effects */
+.hover-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Better dashboard tiles */
+.dashboard-tile {
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.dashboard-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Custom progress bars */
+.progress-thin {
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+/* Session card styles */
+.session-card {
+    transition: all 0.3s ease;
+}
+
+.session-card:hover {
+    border-color: #6366f1;
+}
+
+.session-card.active {
+    border-left: 4px solid #6366f1;
+}
+
+/* Cookie styling */
+.cookie-essential {
+    color: #10b981;
+}
+
+.cookie-functional {
+    color: #3b82f6;
+}
+
+.cookie-analytics {
+    color: #f59e0b;
+}
+
+/* Custom skeleton loading animation */
+@keyframes shimmer {
+    0% {
+        background-position: -468px 0;
+    }
+    100% {
+        background-position: 468px 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(to right, #f6f7f8 8%, #edeef1 18%, #f6f7f8 33%);
+    background-size: 800px 104px;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: 4px;
+    height: 20px;
+    width: 100%;
+}
+
+/* Dashboard responsive fixes */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(1, 1fr);
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c7d2fe;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #6366f1;
+}

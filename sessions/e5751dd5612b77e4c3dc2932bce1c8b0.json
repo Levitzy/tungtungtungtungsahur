@@ -1,0 +1,33 @@
+{
+    "session_id": "e5751dd5612b77e4c3dc2932bce1c8b0",
+    "email": "decent.raven.uqxe@letterhaven.net",
+    "cookies": [
+        {
+            "name": "c_user",
+            "value": "61574941781944",
+            "domain": ".facebook.com",
+            "path": "/"
+        },
+        {
+            "name": "xs",
+            "value": "40:RdzlG5JdeCvpsQ:2:1745580076:-1:-1",
+            "domain": ".facebook.com",
+            "path": "/"
+        },
+        {
+            "name": "fr",
+            "value": "0mR1Jb6thdy0qVJd5.AWdubrr3LZvSKlg2ZFSunmPhj7b1P8kOT186C7JvXzF5gcYH_KY.BoC3Ar..AAA.0.0.BoC3Ar.AWfapZYk9GBZEhho7M-wF3UpfFs",
+            "domain": ".facebook.com",
+            "path": "/"
+        },
+        {
+            "name": "datr",
+            "value": "K3ALaE5XXpC6kGZPHcMppQr_",
+            "domain": ".facebook.com",
+            "path": "/"
+        }
+    ],
+    "user_agent": "Mozilla/5.0 (Linux; Android 14; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.76 Mobile Safari/537.36",
+    "created_at": "2025-04-25T19:21:18.587382",
+    "last_used": "2025-04-25T19:23:11.807398"
+}
