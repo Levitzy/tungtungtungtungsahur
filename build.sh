@@ -15,19 +15,13 @@ mkdir -p static templates sessions logs
 echo "Setting permissions..."
 chmod -R 755 .
 chmod +x server.py
-chmod +x environment_check.py
 
 # Ensure all Python files are executable
 find . -name "*.py" -exec chmod +x {} \;
 
 # Create log files with proper permissions
 touch fb_auth.log
-touch environment_check.log
 chmod 644 *.log
-
-# Run environment check to get diagnostic info
-echo "Running environment check..."
-python environment_check.py
 
 # Set environment variables if not already set
 if [ -z "$PORT" ]; then
@@ -35,7 +29,7 @@ if [ -z "$PORT" ]; then
 fi
 
 if [ -z "$DEBUG" ]; then
-    export DEBUG=false
+    export DEBUG=true
 fi
 
 echo "=== Build completed successfully! ==="

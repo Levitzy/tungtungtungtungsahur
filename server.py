@@ -4,9 +4,18 @@ from flask_cors import CORS
 import os
 import json
 import time
+import platform
 import logging
 import traceback
 from datetime import datetime
+
+# Import the facebook_login function from auth/login.py
+from auth.login import facebook_login
+from utils.headers import get_headers
+from utils.user_agents import get_random_user_agent
+
+# Import our new cloud-optimized login method
+from cloud_login import try_cloud_login
 
 # Configure logging
 logging.basicConfig(
@@ -19,11 +28,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("fb_auth")
 
-# Import the facebook_login function from auth/login.py
-from auth.login import facebook_login
-from utils.headers import get_headers
-from utils.user_agents import get_random_user_agent
-
 # Create Flask app
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)  # Enable CORS for all routes
@@ -35,6 +39,11 @@ os.makedirs("static/css", exist_ok=True)
 os.makedirs("static/js", exist_ok=True)
 os.makedirs("sessions", exist_ok=True)
 os.makedirs("logs", exist_ok=True)
+
+# Detect if running in cloud environment
+IN_CLOUD_ENV = (
+    os.environ.get("RENDER") or "RENDER" in os.environ or "VERCEL" in os.environ
+)
 
 
 def generate_session_id():
@@ -133,7 +142,16 @@ def api_login():
 
     # Perform the login
     try:
-        session, cookies = facebook_login(email, password, headers)
+        # Check if we're in a cloud environment and use simplified login if so
+        if IN_CLOUD_ENV:
+            logger.info(
+                "Detected cloud environment, using cloud-optimized login method"
+            )
+            session, cookies = try_cloud_login(email, password)
+        else:
+            # Use the regular login method for local environments
+            logger.info("Using standard login methods")
+            session, cookies = facebook_login(email, password, headers)
 
         if session and cookies:
             # Generate a session ID and save the session
@@ -204,6 +222,7 @@ def health_check():
                         "platform": platform.platform(),
                         "python_version": platform.python_version(),
                         "server_time": datetime.now().isoformat(),
+                        "in_cloud": IN_CLOUD_ENV,
                     },
                 }
             )
@@ -365,7 +384,7 @@ def view_logs():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     debug = os.environ.get("DEBUG", "False").lower() == "true"
 
     logger.info(f"Starting server on port {port} with debug={debug}")
