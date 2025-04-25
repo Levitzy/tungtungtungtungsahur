@@ -10,11 +10,17 @@ from urllib.parse import urlparse, parse_qs
 import urllib.parse
 import hashlib
 import base64
+import logging
+import traceback
 
 # Import specialized login modules
 from auth.mobile import MobileLogin
 from auth.desktop import DesktopLogin
 from auth.api import ApiLogin
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("auth")
 
 
 class FacebookLogin:
@@ -38,18 +44,22 @@ class FacebookLogin:
         """Print debug messages if debug mode is enabled"""
         if self.debug_mode:
             print(f"[DEBUG] {message}")
+            logger.debug(message)
 
     def info(self, message):
         """Print info messages"""
         print(f"[*] {message}")
+        logger.info(message)
 
     def success(self, message):
         """Print success messages"""
         print(f"[+] {message}")
+        logger.info(f"SUCCESS: {message}")
 
     def error(self, message):
         """Print error messages"""
         print(f"[-] {message}")
+        logger.error(message)
 
     def delay(self, min_sec=1.0, max_sec=3.0):
         """Add a random delay to simulate human interaction"""
@@ -123,8 +133,10 @@ class FacebookLogin:
 
             except Exception as e:
                 self.error(f"Error in {method_name}: {str(e)}")
+                self.debug(f"Exception details: {traceback.format_exc()}")
                 self.delay(2.0, 4.0)
 
+        self.error("All login methods failed")
         return None, None
 
 
@@ -140,8 +152,13 @@ def facebook_login(email, password, headers):
     Returns:
         tuple: (requests.Session, list of cookies) if successful, (None, None) otherwise
     """
-    # Initialize the login handler
-    login_handler = FacebookLogin(email, password, headers)
+    try:
+        # Initialize the login handler
+        login_handler = FacebookLogin(email, password, headers)
 
-    # Execute login process
-    return login_handler.execute()
+        # Execute login process
+        return login_handler.execute()
+    except Exception as e:
+        logger.error(f"Unexpected error in facebook_login: {str(e)}")
+        logger.error(traceback.format_exc())
+        return None, None

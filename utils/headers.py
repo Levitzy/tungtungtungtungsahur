@@ -103,14 +103,29 @@ def get_headers(user_agent):
     connection_type = random.choice(connection_types)
 
     # Connection quality more likely to be excellent on faster connections
+    # Fixed weights to match the number of items in connection_qualities
     if connection_type in ["WIFI", "5G", "ETHERNET"]:
-        connection_quality = random.choices(
-            connection_qualities, weights=[70, 25, 5], k=1
-        )[0]
+        if len(connection_qualities) == 3:
+            # For mobile devices with 3 quality levels
+            connection_quality = random.choices(
+                connection_qualities, weights=[70, 25, 5], k=1
+            )[0]
+        else:
+            # For desktop with 2 quality levels
+            connection_quality = random.choices(
+                connection_qualities, weights=[80, 20], k=1
+            )[0]
     else:
-        connection_quality = random.choices(
-            connection_qualities, weights=[30, 50, 20], k=1
-        )[0]
+        if len(connection_qualities) == 3:
+            # For mobile devices with 3 quality levels
+            connection_quality = random.choices(
+                connection_qualities, weights=[30, 50, 20], k=1
+            )[0]
+        else:
+            # For desktop with 2 quality levels
+            connection_quality = random.choices(
+                connection_qualities, weights=[40, 60], k=1
+            )[0]
 
     # Realistic bandwidth values based on connection type
     if connection_type == "WIFI":
