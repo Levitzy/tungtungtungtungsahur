@@ -4,7 +4,20 @@ from flask_cors import CORS
 import os
 import json
 import time
+import logging
+import traceback
 from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),  # Log to console
+        logging.FileHandler("fb_auth.log"),  # Log to file
+    ],
+)
+logger = logging.getLogger("fb_auth")
 
 # Import the facebook_login function from auth/login.py
 from auth.login import facebook_login
@@ -21,6 +34,7 @@ os.makedirs("templates", exist_ok=True)
 os.makedirs("static/css", exist_ok=True)
 os.makedirs("static/js", exist_ok=True)
 os.makedirs("sessions", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
 
 def generate_session_id():
@@ -95,13 +109,17 @@ def api_login():
     """API endpoint for Facebook login"""
     data = request.get_json()
 
+    logger.info("Login request received")
+
     if not data:
+        logger.warning("No data provided in login request")
         return jsonify({"success": False, "message": "No data provided"}), 400
 
     email = data.get("email")
     password = data.get("password")
 
     if not email or not password:
+        logger.warning("Missing email or password in login request")
         return (
             jsonify({"success": False, "message": "Email and password are required"}),
             400,
@@ -110,6 +128,8 @@ def api_login():
     # Get a random user agent and headers
     user_agent = get_random_user_agent()
     headers = get_headers(user_agent)
+
+    logger.info(f"Attempting login for {email} with user agent: {user_agent[:30]}...")
 
     # Perform the login
     try:
@@ -120,6 +140,17 @@ def api_login():
             session_id = generate_session_id()
             session_data = save_session(session_id, email, cookies, user_agent)
 
+            logger.info(f"Login successful for {email}, session ID: {session_id}")
+
+            # Create list of cookies for the response
+            cookie_list = [
+                {"name": cookie.name, "value": cookie.value}
+                for cookie in cookies
+                if cookie.name in ["c_user", "xs", "fr", "datr"]
+            ]
+
+            logger.debug(f"Returning {len(cookie_list)} cookies to client")
+
             # Return success with session ID and essential cookies
             return jsonify(
                 {
@@ -127,14 +158,13 @@ def api_login():
                     "message": "Login successful",
                     "session_id": session_id,
                     "email": email,
-                    "cookies": [
-                        {"name": cookie.name, "value": cookie.value}
-                        for cookie in cookies
-                        if cookie.name in ["c_user", "xs", "fr", "datr"]
-                    ],
+                    "cookies": cookie_list,
                 }
             )
         else:
+            logger.warning(
+                f"Login failed for {email} - invalid credentials or account requires verification"
+            )
             return (
                 jsonify(
                     {
@@ -146,10 +176,49 @@ def api_login():
             )
 
     except Exception as e:
+        logger.error(f"Error during login for {email}: {str(e)}")
+        logger.error(traceback.format_exc())
         return (
-            jsonify({"success": False, "message": f"Error during login: {str(e)}"}),
+            jsonify(
+                {
+                    "success": False,
+                    "message": f"Error during login: {str(e)}",
+                    "error_details": traceback.format_exc(),
+                }
+            ),
             500,
         )
+
+
+@app.route("/api/health", methods=["GET"])
+def health_check():
+    """API health check endpoint"""
+    try:
+        # Check basic functionality
+        if os.path.exists("sessions"):
+            return jsonify(
+                {
+                    "status": "healthy",
+                    "message": "API is functioning correctly",
+                    "environment": {
+                        "platform": platform.platform(),
+                        "python_version": platform.python_version(),
+                        "server_time": datetime.now().isoformat(),
+                    },
+                }
+            )
+        else:
+            return (
+                jsonify(
+                    {
+                        "status": "degraded",
+                        "message": "Sessions directory not accessible",
+                    }
+                ),
+                500,
+            )
+    except Exception as e:
+        return jsonify({"status": "unhealthy", "message": str(e)}), 500
 
 
 @app.route("/api/sessions", methods=["GET"])
@@ -284,5 +353,20 @@ def export_cookies(session_id):
         return jsonify({"success": False, "message": "Invalid format specified"}), 400
 
 
+@app.route("/logs", methods=["GET"])
+def view_logs():
+    """View application logs - DEVELOPMENT ONLY"""
+    try:
+        with open("fb_auth.log", "r") as f:
+            log_content = f.read()
+        return log_content, 200, {"Content-Type": "text/plain"}
+    except Exception as e:
+        return f"Error retrieving logs: {str(e)}", 500
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("DEBUG", "False").lower() == "true"
+
+    logger.info(f"Starting server on port {port} with debug={debug}")
+    app.run(host="0.0.0.0", port=port, debug=debug)

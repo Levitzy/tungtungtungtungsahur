@@ -7,6 +7,9 @@ import string
 import requests
 import hashlib
 import base64
+import logging
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 
 class ApiLogin:
@@ -15,7 +18,7 @@ class ApiLogin:
         self.email = email
         self.password = password
         self.headers = headers
-        self.session = requests.Session()
+        self.session = self._create_session_with_retries()
         self.user_agent = headers.get("User-Agent", "")
         self.cookies = None
         self.debug_mode = True
@@ -25,22 +28,45 @@ class ApiLogin:
         email_hash = hashlib.md5(email.encode()).hexdigest()
         self.device_id = f"device_{email_hash[:16]}"
 
+    def _create_session_with_retries(self):
+        """Create a requests session with retry mechanism"""
+        session = requests.Session()
+
+        # Configure retry strategy with backoff
+        retry_strategy = Retry(
+            total=3,  # Maximum number of retries
+            backoff_factor=1,  # Exponential backoff
+            status_forcelist=[429, 500, 502, 503, 504],  # Retry on these status codes
+            allowed_methods=["GET", "POST"],  # Allow retry for these methods
+        )
+
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+
+        return session
+
     def debug(self, message):
         """Print debug messages if debug mode is enabled"""
         if self.debug_mode:
             print(f"[DEBUG] {message}")
+            # Also log to file for debugging on Render
+            logging.debug(message)
 
     def info(self, message):
         """Print info messages"""
         print(f"[*] {message}")
+        logging.info(message)
 
     def success(self, message):
         """Print success messages"""
         print(f"[+] {message}")
+        logging.info(f"SUCCESS: {message}")
 
     def error(self, message):
         """Print error messages"""
         print(f"[-] {message}")
+        logging.error(message)
 
     def delay(self, min_sec=1.0, max_sec=3.0):
         """Add a random delay to simulate human interaction"""
@@ -56,7 +82,7 @@ class ApiLogin:
             self.info("Using API-based login approach...")
 
             # Clean session
-            self.session = requests.Session()
+            self.session = self._create_session_with_retries()
 
             # API endpoint
             api_url = "https://b-api.facebook.com/method/auth.login"
@@ -138,15 +164,20 @@ class ApiLogin:
                 "X-FB-Server-Cluster": "True",
             }
 
-            # Submit API request
+            # Submit API request with increased timeout for cloud environments
             self.info("Sending API login request...")
             api_response = self.session.post(
-                api_url, data=api_params, headers=api_headers, timeout=30
+                api_url, data=api_params, headers=api_headers, timeout=60
             )
+
+            # Log the response status and headers for debugging
+            self.debug(f"API Response Status: {api_response.status_code}")
+            self.debug(f"API Response Headers: {dict(api_response.headers)}")
 
             # Parse the response
             try:
                 response_data = api_response.json()
+                self.debug(f"API Response Content: {json.dumps(response_data)}")
 
                 if "access_token" in response_data:
                     self.success("API login successful!")
@@ -158,20 +189,59 @@ class ApiLogin:
                                 cookie["name"], cookie["value"], domain=".facebook.com"
                             )
 
+                        self.debug(
+                            f"Set cookies: {[c.name for c in self.session.cookies]}"
+                        )
+
                     return self.session, self.session.cookies
 
                 elif "error_code" in response_data:
-                    self.error(
-                        f"API login error: {response_data.get('error_msg', 'Unknown error')}"
-                    )
+                    error_msg = response_data.get("error_msg", "Unknown error")
+                    self.error(f"API login error: {error_msg}")
 
-            except ValueError:
-                self.error("Failed to parse API response")
+                    # Check for specific error conditions
+                    if "password" in error_msg.lower():
+                        self.error("Password error detected. Check credentials.")
+                    elif (
+                        "temporary" in error_msg.lower() or "block" in error_msg.lower()
+                    ):
+                        self.error("Account may be temporarily blocked or restricted.")
+                        self.rate_limited = True
+                    elif "identify" in error_msg.lower() or "find" in error_msg.lower():
+                        self.error("Email not recognized or account issue.")
 
+            except ValueError as e:
+                self.error(f"Failed to parse API response: {str(e)}")
+                self.debug(f"Raw response content: {api_response.text[:500]}")
+
+            except Exception as e:
+                self.error(f"Unexpected error parsing response: {str(e)}")
+
+            return None, None
+
+        except requests.exceptions.Timeout:
+            self.error(
+                f"API login request timed out. This may indicate network issues or IP blocking."
+            )
+            return None, None
+
+        except requests.exceptions.ConnectionError as e:
+            self.error(f"Connection error in api_based_login: {str(e)}")
+            self.debug(
+                "This may indicate network restrictions in the deployment environment"
+            )
+            return None, None
+
+        except requests.exceptions.RequestException as e:
+            self.error(f"Request error in api_based_login: {str(e)}")
             return None, None
 
         except Exception as e:
             self.error(f"Error in api_based_login: {str(e)}")
+            # Log full exception details with traceback for debugging
+            import traceback
+
+            self.debug(f"Full exception: {traceback.format_exc()}")
             return None, None
 
     def graph_api_login(self):
@@ -182,7 +252,7 @@ class ApiLogin:
             self.info("Using Graph API login approach...")
 
             # Clean session
-            self.session = requests.Session()
+            self.session = self._create_session_with_retries()
 
             # Graph API endpoint for authentication
             api_url = "https://graph.facebook.com/auth/login"
@@ -255,17 +325,29 @@ class ApiLogin:
                 "X-FB-Device-Group": str(random.randint(1000, 9999)),
             }
 
-            # Submit API request
+            # Submit API request with increased timeout
             self.info("Sending Graph API login request...")
             self.delay(1.0, 2.0)
 
-            api_response = self.session.post(
-                api_url, data=api_params, headers=graph_headers, timeout=30
+            # Log request details for debugging
+            self.debug(f"Graph API URL: {api_url}")
+            self.debug(f"Graph API Headers: {json.dumps(graph_headers)}")
+            self.debug(
+                f"Graph API Params (partial): email={self.email}, device_id={device_id}"
             )
+
+            api_response = self.session.post(
+                api_url, data=api_params, headers=graph_headers, timeout=60
+            )
+
+            # Log response status and headers
+            self.debug(f"Graph API Response Status: {api_response.status_code}")
+            self.debug(f"Graph API Response Headers: {dict(api_response.headers)}")
 
             # Parse the response
             try:
                 response_data = api_response.json()
+                self.debug(f"Graph API Response: {json.dumps(response_data)}")
 
                 if "access_token" in response_data or "session_key" in response_data:
                     self.success("Graph API login successful!")
@@ -276,50 +358,101 @@ class ApiLogin:
                             self.session.cookies.set(
                                 cookie["name"], cookie["value"], domain=".facebook.com"
                             )
+                        self.debug(
+                            f"Set cookies: {[c.name for c in self.session.cookies]}"
+                        )
 
                     # Sometimes the access token can be used to get session cookies
                     elif "access_token" in response_data:
                         self.info("Got access token, retrieving session cookies...")
                         self.delay(0.5, 1.0)
 
-                        cookie_url = "https://graph.facebook.com/v16.0/cookie_jar"
-                        cookie_headers = graph_headers.copy()
-
-                        if "access_token" in response_data:
-                            cookie_headers["Authorization"] = (
-                                f"Bearer {response_data['access_token']}"
-                            )
-
-                        cookie_response = self.session.get(
-                            cookie_url, headers=cookie_headers, timeout=30
+                        token = response_data["access_token"]
+                        self.debug(
+                            f"Using access token: {token[:10]}... to get cookies"
                         )
 
                         try:
-                            cookie_data = cookie_response.json()
-                            if "data" in cookie_data and cookie_data["data"].get(
-                                "cookies"
-                            ):
-                                for cookie in cookie_data["data"]["cookies"]:
-                                    self.session.cookies.set(
-                                        cookie["name"],
-                                        cookie["value"],
-                                        domain=".facebook.com",
+                            cookie_url = "https://graph.facebook.com/v16.0/cookie_jar"
+                            cookie_headers = graph_headers.copy()
+                            cookie_headers["Authorization"] = f"Bearer {token}"
+
+                            cookie_response = self.session.get(
+                                cookie_url, headers=cookie_headers, timeout=30
+                            )
+
+                            self.debug(
+                                f"Cookie response status: {cookie_response.status_code}"
+                            )
+
+                            try:
+                                cookie_data = cookie_response.json()
+                                if "data" in cookie_data and cookie_data["data"].get(
+                                    "cookies"
+                                ):
+                                    for cookie in cookie_data["data"]["cookies"]:
+                                        self.session.cookies.set(
+                                            cookie["name"],
+                                            cookie["value"],
+                                            domain=".facebook.com",
+                                        )
+                                    self.debug(
+                                        f"Set cookies from jar: {[c.name for c in self.session.cookies]}"
                                     )
-                        except:
-                            self.error("Failed to parse cookie response")
+                            except Exception as e:
+                                self.error(f"Failed to parse cookie response: {str(e)}")
+                                self.debug(
+                                    f"Cookie response content: {cookie_response.text[:500]}"
+                                )
+                        except Exception as e:
+                            self.error(f"Error retrieving cookies with token: {str(e)}")
 
                     return self.session, self.session.cookies
 
                 elif "error" in response_data:
-                    self.error(
-                        f"Graph API login error: {response_data.get('error', {}).get('message', 'Unknown error')}"
+                    error_msg = response_data.get("error", {}).get(
+                        "message", "Unknown error"
                     )
+                    self.error(f"Graph API login error: {error_msg}")
 
-            except ValueError:
-                self.error("Failed to parse Graph API response")
+                    # Check for specific error conditions
+                    if "password" in error_msg.lower():
+                        self.error("Password error detected. Check credentials.")
+                    elif (
+                        "temporary" in error_msg.lower() or "block" in error_msg.lower()
+                    ):
+                        self.error("Account may be temporarily blocked or restricted.")
+                        self.rate_limited = True
+                    elif "identify" in error_msg.lower() or "find" in error_msg.lower():
+                        self.error("Email not recognized or account issue.")
 
+            except ValueError as e:
+                self.error(f"Failed to parse Graph API response: {str(e)}")
+                self.debug(f"Raw response content: {api_response.text[:500]}")
+
+            return None, None
+
+        except requests.exceptions.Timeout:
+            self.error(
+                f"Graph API login request timed out. This may indicate network issues or IP blocking."
+            )
+            return None, None
+
+        except requests.exceptions.ConnectionError as e:
+            self.error(f"Connection error in graph_api_login: {str(e)}")
+            self.debug(
+                "This may indicate network restrictions in the deployment environment"
+            )
+            return None, None
+
+        except requests.exceptions.RequestException as e:
+            self.error(f"Request error in graph_api_login: {str(e)}")
             return None, None
 
         except Exception as e:
             self.error(f"Error in graph_api_login: {str(e)}")
+            # Log full exception details with traceback for debugging
+            import traceback
+
+            self.debug(f"Full exception: {traceback.format_exc()}")
             return None, None
