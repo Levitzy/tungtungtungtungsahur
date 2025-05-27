@@ -8,8 +8,8 @@ import requests
 import hashlib
 import base64
 import logging
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+
+logger = logging.getLogger("api_login")
 
 
 class ApiLogin:
@@ -17,9 +17,10 @@ class ApiLogin:
         """Initialize the Facebook API login handler with credentials"""
         self.email = email
         self.password = password
-        self.headers = headers
-        self.session = self._create_session_with_retries()
+
+        # Use only essential headers for API login
         self.user_agent = headers.get("User-Agent", "")
+        self.session = requests.Session()
         self.cookies = None
         self.debug_mode = True
         self.rate_limited = False
@@ -28,45 +29,26 @@ class ApiLogin:
         email_hash = hashlib.md5(email.encode()).hexdigest()
         self.device_id = f"device_{email_hash[:16]}"
 
-    def _create_session_with_retries(self):
-        """Create a requests session with retry mechanism"""
-        session = requests.Session()
-
-        # Configure retry strategy with backoff
-        retry_strategy = Retry(
-            total=3,  # Maximum number of retries
-            backoff_factor=1,  # Exponential backoff
-            status_forcelist=[429, 500, 502, 503, 504],  # Retry on these status codes
-            allowed_methods=["GET", "POST"],  # Allow retry for these methods
-        )
-
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
-
-        return session
-
     def debug(self, message):
         """Print debug messages if debug mode is enabled"""
         if self.debug_mode:
             print(f"[DEBUG] {message}")
-            # Also log to file for debugging on Render
-            logging.debug(message)
+            logger.debug(message)
 
     def info(self, message):
         """Print info messages"""
         print(f"[*] {message}")
-        logging.info(message)
+        logger.info(message)
 
     def success(self, message):
         """Print success messages"""
         print(f"[+] {message}")
-        logging.info(f"SUCCESS: {message}")
+        logger.info(f"SUCCESS: {message}")
 
     def error(self, message):
         """Print error messages"""
         print(f"[-] {message}")
-        logging.error(message)
+        logger.error(message)
 
     def delay(self, min_sec=1.0, max_sec=3.0):
         """Add a random delay to simulate human interaction"""
@@ -76,383 +58,230 @@ class ApiLogin:
 
     def api_based_login(self):
         """
-        Improved API-based login method that mimics the mobile app
+        Simplified API-based login method that focuses on reliability
         """
         try:
             self.info("Using API-based login approach...")
 
             # Clean session
-            self.session = self._create_session_with_retries()
+            self.session = requests.Session()
 
-            # API endpoint
-            api_url = "https://b-api.facebook.com/method/auth.login"
+            # Use more standard user agent
+            standard_user_agent = "Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.98 Mobile Safari/537.36"
+
+            # API endpoint - use the main Facebook login endpoint instead of b-api
+            api_url = "https://www.facebook.com/login/device-based/regular/login/?refsrc=deprecated&lwv=101"
 
             # Generate a device ID and other metadata for authenticity
             device_id = "".join(
                 random.choices(string.ascii_lowercase + string.digits, k=16)
             )
 
-            # Generate a random locale
-            locales = ["en_US", "en_GB", "en_AU", "en_CA"]
-            locale = random.choice(locales)
-
-            # Generate metadata about the "device"
-            adid = "".join(random.choices(string.hexdigits.lower(), k=16))
-            family_device_id = "".join(random.choices(string.hexdigits.lower(), k=16))
-            advertiser_id = "".join(random.choices(string.hexdigits.lower(), k=16))
-            android_id = "".join(random.choices(string.hexdigits.lower(), k=16))
+            # Generate a locale
+            locale = "en_US"
 
             # Create API parameters with improved structure
-            api_params = {
-                # Authentication parameters
-                "email": self.email,
-                "password": self.password,
-                "credentials_type": "password",
-                "generate_session_cookies": "1",
-                "error_detail_type": "button_with_disabled",
-                "source": "login",
-                "meta_inf_fbmeta": "",
-                "advertiser_id": advertiser_id,
-                "currently_logged_in_userid": "0",
-                # API specific parameters
-                "api_key": "882a8490361da98702bf97a021ddc14d",
-                "access_token": "350685531728|62f8ce9f74b12f84c123cc23437a4a32",
-                "format": "json",
-                "sdk_version": "2",
-                "return_ssl_resources": "1",
-                # Device information
-                "device_id": device_id,
-                "family_device_id": family_device_id,
-                "device_id_old": adid,
-                "android_id": android_id,
-                "method": "auth.login",
-                "locale": locale,
-                "client_country_code": locale.split("_")[1],
-                # Signature and verification
-                "sig": hashlib.md5(
-                    (
-                        f"api_key=882a8490361da98702bf97a021ddc14d"
-                        f"credentials_type=password"
-                        f"email={self.email}"
-                        f"format=json"
-                        f"generate_session_cookies=1"
-                        f"locale={locale}"
-                        f"method=auth.login"
-                        f"password={self.password}"
-                        f"return_ssl_resources=1"
-                        f"v=1.0"
-                        f"350685531728|62f8ce9f74b12f84c123cc23437a4a32"
-                    ).encode()
-                ).hexdigest(),
+            api_params = {"email": self.email, "pass": self.password, "login": "Log In"}
+
+            # Try to fetch login form to get any required tokens
+            self.debug("Fetching login page to extract tokens...")
+            init_response = self.session.get(
+                "https://www.facebook.com/login/",
+                headers={
+                    "User-Agent": standard_user_agent,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+                timeout=30,
+            )
+
+            # Look for important tokens in the page
+            lsd_search = re.search(r'name="lsd" value="([^"]+)"', init_response.text)
+            if lsd_search:
+                api_params["lsd"] = lsd_search.group(1)
+                self.debug(f"Found lsd token: {api_params['lsd']}")
+
+            jazoest_search = re.search(
+                r'name="jazoest" value="([^"]+)"', init_response.text
+            )
+            if jazoest_search:
+                api_params["jazoest"] = jazoest_search.group(1)
+                self.debug(f"Found jazoest token: {api_params['jazoest']}")
+
+            # Look for additional tokens that might be needed
+            token_searches = {
+                "m_ts": r'name="m_ts" value="([^"]+)"',
+                "li": r'name="li" value="([^"]+)"',
+                "try_number": r'name="try_number" value="([^"]+)"',
+                "unrecognized_tries": r'name="unrecognized_tries" value="([^"]+)"',
+                "bi_xrwh": r'name="bi_xrwh" value="([^"]+)"',
+                "submit": r'name="_fb_submit" value="([^"]+)"',
             }
 
-            # Set API headers to mimic mobile app
+            for key, pattern in token_searches.items():
+                search = re.search(pattern, init_response.text)
+                if search:
+                    api_params[key] = search.group(1)
+                    self.debug(f"Found {key}: {api_params[key]}")
+
+            # Set API headers to mimic a real browser
             api_headers = {
-                "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 11; SM-G973F Build/RP1A.200720.012)",
-                "Accept-Encoding": "gzip, deflate",
-                "Connection": "close",
+                "User-Agent": standard_user_agent,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Referer": "https://www.facebook.com/login/",
                 "Content-Type": "application/x-www-form-urlencoded",
-                "x-fb-connection-type": "mobile.LTE",
-                "x-fb-connection-quality": "EXCELLENT",
-                "x-fb-connection-bandwidth": str(random.randint(20000000, 40000000)),
-                "x-fb-net-hni": str(random.randint(20000, 40000)),
-                "x-fb-device-group": "5120",
-                "X-FB-Friendly-Name": "authenticate",
-                "X-FB-Request-Analytics-Tags": "graphservice",
-                "X-FB-HTTP-Engine": "Liger",
-                "X-FB-Client-IP": "True",
-                "X-FB-Server-Cluster": "True",
+                "Origin": "https://www.facebook.com",
+                "Connection": "keep-alive",
+                "Cache-Control": "max-age=0",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
             }
 
-            # Submit API request with increased timeout for cloud environments
+            # Submit API request
             self.info("Sending API login request...")
             api_response = self.session.post(
-                api_url, data=api_params, headers=api_headers, timeout=60
+                api_url,
+                data=api_params,
+                headers=api_headers,
+                timeout=30,
+                allow_redirects=True,
             )
 
-            # Log the response status and headers for debugging
-            self.debug(f"API Response Status: {api_response.status_code}")
-            self.debug(f"API Response Headers: {dict(api_response.headers)}")
+            # Check login success - look for c_user cookie
+            if "c_user" in self.session.cookies:
+                self.success("API login successful!")
+                return self.session, self.session.cookies
 
-            # Parse the response
-            try:
-                response_data = api_response.json()
-                self.debug(f"API Response Content: {json.dumps(response_data)}")
+            # Try to access account page to confirm login
+            account_response = self.session.get(
+                "https://m.facebook.com/home.php",
+                headers={
+                    "User-Agent": standard_user_agent,
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                },
+                timeout=30,
+            )
 
-                if "access_token" in response_data:
-                    self.success("API login successful!")
+            # Check if we can access a page that requires login
+            if "login" not in account_response.url and not any(
+                term in account_response.text for term in ["login", "Log in", "Login"]
+            ):
+                self.success("Login successful validated via page access!")
+                return self.session, self.session.cookies
 
-                    # If session cookies are available, use them
-                    if "session_cookies" in response_data:
-                        for cookie in response_data["session_cookies"]:
-                            self.session.cookies.set(
-                                cookie["name"], cookie["value"], domain=".facebook.com"
-                            )
-
-                        self.debug(
-                            f"Set cookies: {[c.name for c in self.session.cookies]}"
-                        )
-
-                    return self.session, self.session.cookies
-
-                elif "error_code" in response_data:
-                    error_msg = response_data.get("error_msg", "Unknown error")
-                    self.error(f"API login error: {error_msg}")
-
-                    # Check for specific error conditions
-                    if "password" in error_msg.lower():
-                        self.error("Password error detected. Check credentials.")
-                    elif (
-                        "temporary" in error_msg.lower() or "block" in error_msg.lower()
-                    ):
-                        self.error("Account may be temporarily blocked or restricted.")
-                        self.rate_limited = True
-                    elif "identify" in error_msg.lower() or "find" in error_msg.lower():
-                        self.error("Email not recognized or account issue.")
-
-            except ValueError as e:
-                self.error(f"Failed to parse API response: {str(e)}")
-                self.debug(f"Raw response content: {api_response.text[:500]}")
-
-            except Exception as e:
-                self.error(f"Unexpected error parsing response: {str(e)}")
-
-            return None, None
-
-        except requests.exceptions.Timeout:
+            # Login failed
             self.error(
-                f"API login request timed out. This may indicate network issues or IP blocking."
+                "API login failed - invalid credentials or security check triggered"
             )
-            return None, None
-
-        except requests.exceptions.ConnectionError as e:
-            self.error(f"Connection error in api_based_login: {str(e)}")
-            self.debug(
-                "This may indicate network restrictions in the deployment environment"
-            )
-            return None, None
-
-        except requests.exceptions.RequestException as e:
-            self.error(f"Request error in api_based_login: {str(e)}")
             return None, None
 
         except Exception as e:
             self.error(f"Error in api_based_login: {str(e)}")
-            # Log full exception details with traceback for debugging
             import traceback
 
-            self.debug(f"Full exception: {traceback.format_exc()}")
+            self.debug(f"Traceback: {traceback.format_exc()}")
             return None, None
 
-    def graph_api_login(self):
+    def mobile_api_login(self):
         """
-        Alternative API login method using Graph API
+        Alternative API login method using mobile endpoints
         """
         try:
-            self.info("Using Graph API login approach...")
+            self.info("Using mobile API login approach...")
 
             # Clean session
-            self.session = self._create_session_with_retries()
+            self.session = requests.Session()
 
-            # Graph API endpoint for authentication
-            api_url = "https://graph.facebook.com/auth/login"
+            # Mobile API endpoint
+            api_url = "https://m.facebook.com/login.php"
 
-            # Generate device information
+            # Generate random IDs
             device_id = "".join(
                 random.choices(string.ascii_lowercase + string.digits, k=16)
             )
-            machine_id = "".join(random.choices(string.hexdigits.lower(), k=24))
-            adid = "".join(random.choices(string.hexdigits.lower(), k=16))
 
-            # Create a CRYPT value (mimicking FB app)
-            crypt = base64.b64encode(
-                json.dumps(
-                    {
-                        "i": machine_id,
-                        "t": int(time.time()),
-                        "m": 0,
-                        "c": "".join(
-                            random.choices(string.ascii_letters + string.digits, k=22)
-                        ),
-                    }
-                ).encode()
-            ).decode()
-
-            # Create API parameters with detailed device information
-            api_params = {
-                # Authentication parameters
-                "email": self.email,
-                "password": self.password,
-                "format": "json",
-                "generate_session_cookies": "1",
-                "generate_analytics_claim": "1",
-                "generate_machine_id": "1",
-                "locale": "en_US",
-                "client_country_code": "US",
-                # Device information
-                "device_id": device_id,
-                "cpl": "true",
-                "family_device_id": device_id,
-                "credentials_type": "device_based_login_password",
-                "adid": adid,
-                "identifier": self.email,
-                "machine_id": machine_id,
-                "error_detail_type": "button_with_disabled",
-                # Device-based sign-in parameters
-                "fb_api_req_friendly_name": "authenticate",
-                "fb_api_caller_class": "com.facebook.account.login.protocol.Fb4aAuthHandler",
-                "access_token": "350685531728|62f8ce9f74b12f84c123cc23437a4a32",
-                "crypt": crypt,
-            }
-
-            # Set API headers to mimic FB app
-            graph_headers = {
-                "User-Agent": "FBAndroid/431.0.0.30.118;FBMF/samsung;FBBD/samsung;FBDV/SM-G973F;FBSV/11;FBCA/arm64-v8a:null;FBDM/{density=2.25}",
-                "Accept-Encoding": "gzip, deflate",
-                "Connection": "close",
-                "Content-Type": "application/x-www-form-urlencoded",
-                "X-FB-Connection-Type": "WIFI",
-                "X-FB-Net-HNI": str(random.randint(20000, 40000)),
-                "X-FB-HTTP-Engine": "Liger",
-                "X-FB-Client-IP": "True",
-                "X-FB-Server-Cluster": "True",
-                "X-FB-SIM-HNI": str(random.randint(20000, 40000)),
-                "Authorization": "OAuth 350685531728|62f8ce9f74b12f84c123cc23437a4a32",
-                "X-FB-Connection-Quality": "EXCELLENT",
-                "X-FB-Friendly-Name": "authenticate",
-                "X-FB-Request-Analytics-Tags": "graphservice",
-                "X-Tigon-Is-Retry": "False",
-                "X-FB-Device-Group": str(random.randint(1000, 9999)),
-            }
-
-            # Submit API request with increased timeout
-            self.info("Sending Graph API login request...")
-            self.delay(1.0, 2.0)
-
-            # Log request details for debugging
-            self.debug(f"Graph API URL: {api_url}")
-            self.debug(f"Graph API Headers: {json.dumps(graph_headers)}")
-            self.debug(
-                f"Graph API Params (partial): email={self.email}, device_id={device_id}"
+            # First, visit the login page to get CSRF tokens
+            self.debug("Fetching mobile login page for tokens...")
+            initial_response = self.session.get(
+                api_url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+                timeout=30,
             )
 
-            api_response = self.session.post(
-                api_url, data=api_params, headers=graph_headers, timeout=60
+            # Extract CSRF and other tokens
+            form_data = {"email": self.email, "pass": self.password, "login": "Log In"}
+
+            # Look for tokens
+            lsd_search = re.search(r'name="lsd" value="([^"]+)"', initial_response.text)
+            if lsd_search:
+                form_data["lsd"] = lsd_search.group(1)
+
+            jazoest_search = re.search(
+                r'name="jazoest" value="([^"]+)"', initial_response.text
+            )
+            if jazoest_search:
+                form_data["jazoest"] = jazoest_search.group(1)
+
+            # Look for additional mobile-specific tokens
+            for token in ["m_ts", "li", "try_number", "unrecognized_tries"]:
+                search = re.search(
+                    f'name="{token}" value="([^"]+)"', initial_response.text
+                )
+                if search:
+                    form_data[token] = search.group(1)
+
+            # Submit login
+            self.info("Submitting mobile login request...")
+            login_response = self.session.post(
+                api_url,
+                data=form_data,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Origin": "https://m.facebook.com",
+                    "Referer": api_url,
+                },
+                timeout=30,
+                allow_redirects=True,
             )
 
-            # Log response status and headers
-            self.debug(f"Graph API Response Status: {api_response.status_code}")
-            self.debug(f"Graph API Response Headers: {dict(api_response.headers)}")
+            # Check for successful login
+            if "c_user" in self.session.cookies:
+                self.success("Mobile API login successful!")
+                return self.session, self.session.cookies
 
-            # Parse the response
-            try:
-                response_data = api_response.json()
-                self.debug(f"Graph API Response: {json.dumps(response_data)}")
-
-                if "access_token" in response_data or "session_key" in response_data:
-                    self.success("Graph API login successful!")
-
-                    # If session cookies are available, use them
-                    if "session_cookies" in response_data:
-                        for cookie in response_data["session_cookies"]:
-                            self.session.cookies.set(
-                                cookie["name"], cookie["value"], domain=".facebook.com"
-                            )
-                        self.debug(
-                            f"Set cookies: {[c.name for c in self.session.cookies]}"
-                        )
-
-                    # Sometimes the access token can be used to get session cookies
-                    elif "access_token" in response_data:
-                        self.info("Got access token, retrieving session cookies...")
-                        self.delay(0.5, 1.0)
-
-                        token = response_data["access_token"]
-                        self.debug(
-                            f"Using access token: {token[:10]}... to get cookies"
-                        )
-
-                        try:
-                            cookie_url = "https://graph.facebook.com/v16.0/cookie_jar"
-                            cookie_headers = graph_headers.copy()
-                            cookie_headers["Authorization"] = f"Bearer {token}"
-
-                            cookie_response = self.session.get(
-                                cookie_url, headers=cookie_headers, timeout=30
-                            )
-
-                            self.debug(
-                                f"Cookie response status: {cookie_response.status_code}"
-                            )
-
-                            try:
-                                cookie_data = cookie_response.json()
-                                if "data" in cookie_data and cookie_data["data"].get(
-                                    "cookies"
-                                ):
-                                    for cookie in cookie_data["data"]["cookies"]:
-                                        self.session.cookies.set(
-                                            cookie["name"],
-                                            cookie["value"],
-                                            domain=".facebook.com",
-                                        )
-                                    self.debug(
-                                        f"Set cookies from jar: {[c.name for c in self.session.cookies]}"
-                                    )
-                            except Exception as e:
-                                self.error(f"Failed to parse cookie response: {str(e)}")
-                                self.debug(
-                                    f"Cookie response content: {cookie_response.text[:500]}"
-                                )
-                        except Exception as e:
-                            self.error(f"Error retrieving cookies with token: {str(e)}")
-
-                    return self.session, self.session.cookies
-
-                elif "error" in response_data:
-                    error_msg = response_data.get("error", {}).get(
-                        "message", "Unknown error"
-                    )
-                    self.error(f"Graph API login error: {error_msg}")
-
-                    # Check for specific error conditions
-                    if "password" in error_msg.lower():
-                        self.error("Password error detected. Check credentials.")
-                    elif (
-                        "temporary" in error_msg.lower() or "block" in error_msg.lower()
-                    ):
-                        self.error("Account may be temporarily blocked or restricted.")
-                        self.rate_limited = True
-                    elif "identify" in error_msg.lower() or "find" in error_msg.lower():
-                        self.error("Email not recognized or account issue.")
-
-            except ValueError as e:
-                self.error(f"Failed to parse Graph API response: {str(e)}")
-                self.debug(f"Raw response content: {api_response.text[:500]}")
-
-            return None, None
-
-        except requests.exceptions.Timeout:
-            self.error(
-                f"Graph API login request timed out. This may indicate network issues or IP blocking."
+            # Try to access home page
+            home_response = self.session.get(
+                "https://m.facebook.com/home.php",
+                headers={
+                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+                },
+                timeout=30,
             )
-            return None, None
 
-        except requests.exceptions.ConnectionError as e:
-            self.error(f"Connection error in graph_api_login: {str(e)}")
-            self.debug(
-                "This may indicate network restrictions in the deployment environment"
-            )
-            return None, None
+            # Check if we're on the home page
+            if "login" not in home_response.url:
+                self.success("Mobile login validated via home page access!")
+                return self.session, self.session.cookies
 
-        except requests.exceptions.RequestException as e:
-            self.error(f"Request error in graph_api_login: {str(e)}")
+            # Login failed
+            self.error("Mobile API login failed")
             return None, None
 
         except Exception as e:
-            self.error(f"Error in graph_api_login: {str(e)}")
-            # Log full exception details with traceback for debugging
+            self.error(f"Error in mobile_api_login: {str(e)}")
             import traceback
 
-            self.debug(f"Full exception: {traceback.format_exc()}")
+            self.debug(f"Traceback: {traceback.format_exc()}")
             return None, None

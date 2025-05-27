@@ -69,75 +69,97 @@ class FacebookLogin:
 
     def execute(self):
         """Execute the login process with multiple fallback methods"""
-        # Determine device type from user agent and prioritize methods accordingly
-        is_mobile = (
-            "Mobile" in self.user_agent
-            or "Android" in self.user_agent
-            or "iPhone" in self.user_agent
-        )
+        # Try the API methods first as they're more reliable in cloud environments
+        try:
+            # First try the improved API-based login (most reliable in cloud)
+            self.info("Trying improved API-based login method")
+            session, cookies = self.api_login.api_based_login()
+            if session and cookies:
+                self.success("Successfully logged in using API-based login")
+                return session, cookies
 
-        # Different login strategies based on device type
-        if is_mobile:
-            self.info("Detected mobile user agent, prioritizing mobile methods")
-            methods = [
-                (
-                    self.api_login.api_based_login,
-                    "API-Based Login",
-                ),  # Start with API as it's most reliable
-                (self.api_login.graph_api_login, "Graph API Login"),
-                (self.mobile_login.stealth_mobile_login, "Stealth Mobile Login"),
-                (self.mobile_login.mobile_direct_login, "Direct Mobile Login"),
-                (
-                    self.desktop_login.alternative_desktop_login,
-                    "Alternative Desktop Login",
-                ),
-                (self.desktop_login.standard_desktop_login, "Standard Desktop Login"),
-            ]
-        else:
-            self.info("Detected desktop user agent, prioritizing desktop methods")
-            methods = [
-                (
-                    self.api_login.api_based_login,
-                    "API-Based Login",
-                ),  # Start with API as it's most reliable
-                (
-                    self.desktop_login.alternative_desktop_login,
-                    "Alternative Desktop Login",
-                ),
-                (self.desktop_login.standard_desktop_login, "Standard Desktop Login"),
-                (self.api_login.graph_api_login, "Graph API Login"),
-                (self.mobile_login.stealth_mobile_login, "Stealth Mobile Login"),
-                (self.mobile_login.mobile_direct_login, "Direct Mobile Login"),
-            ]
+            # Short delay between attempts
+            self.delay(1.0, 2.0)
 
-        # Try methods in order (API first since it's most reliable, then others)
-        for method_func, method_name in methods:
-            try:
-                self.info(f"Attempting login via {method_name}")
-                session, cookies = method_func()
+            # Try mobile API login next
+            self.info("Trying mobile API login method")
+            session, cookies = self.api_login.mobile_api_login()
+            if session and cookies:
+                self.success("Successfully logged in using mobile API login")
+                return session, cookies
 
-                if session and cookies:
-                    self.success(f"Successfully logged in using {method_name}")
-                    return session, cookies
+            # If API methods fail, determine device type from user agent
+            is_mobile = (
+                "Mobile" in self.user_agent
+                or "Android" in self.user_agent
+                or "iPhone" in self.user_agent
+            )
 
-                # If we got rate limited, wait longer before trying the next method
-                if (
-                    hasattr(method_func.__self__, "rate_limited")
-                    and method_func.__self__.rate_limited
-                ):
-                    self.info("Detected rate limiting, waiting before next attempt...")
-                    self.delay(15.0, 20.0)
-                    method_func.__self__.rate_limited = False
-                else:
-                    self.delay(3.0, 5.0)
+            # Different login strategies based on device type
+            if is_mobile:
+                self.info("Detected mobile user agent, trying mobile methods")
+                methods = [
+                    (self.mobile_login.stealth_mobile_login, "Stealth Mobile Login"),
+                    (self.mobile_login.mobile_direct_login, "Direct Mobile Login"),
+                    (
+                        self.desktop_login.alternative_desktop_login,
+                        "Alternative Desktop Login",
+                    ),
+                    (
+                        self.desktop_login.standard_desktop_login,
+                        "Standard Desktop Login",
+                    ),
+                ]
+            else:
+                self.info("Detected desktop user agent, trying desktop methods")
+                methods = [
+                    (
+                        self.desktop_login.alternative_desktop_login,
+                        "Alternative Desktop Login",
+                    ),
+                    (
+                        self.desktop_login.standard_desktop_login,
+                        "Standard Desktop Login",
+                    ),
+                    (self.mobile_login.stealth_mobile_login, "Stealth Mobile Login"),
+                    (self.mobile_login.mobile_direct_login, "Direct Mobile Login"),
+                ]
 
-            except Exception as e:
-                self.error(f"Error in {method_name}: {str(e)}")
-                self.debug(f"Exception details: {traceback.format_exc()}")
-                self.delay(2.0, 4.0)
+            # Try fallback methods
+            for method_func, method_name in methods:
+                try:
+                    self.info(f"Attempting login via {method_name}")
+                    session, cookies = method_func()
 
-        self.error("All login methods failed")
-        return None, None
+                    if session and cookies:
+                        self.success(f"Successfully logged in using {method_name}")
+                        return session, cookies
+
+                    # If we got rate limited, wait longer before trying the next method
+                    if (
+                        hasattr(method_func.__self__, "rate_limited")
+                        and method_func.__self__.rate_limited
+                    ):
+                        self.info(
+                            "Detected rate limiting, waiting before next attempt..."
+                        )
+                        self.delay(5.0, 8.0)
+                        method_func.__self__.rate_limited = False
+                    else:
+                        self.delay(2.0, 3.0)
+
+                except Exception as e:
+                    self.error(f"Error in {method_name}: {str(e)}")
+                    self.debug(f"Exception details: {traceback.format_exc()}")
+                    self.delay(1.0, 2.0)
+
+            self.error("All login methods failed")
+            return None, None
+
+        except Exception as e:
+            self.error(f"Unexpected error during login: {str(e)}")
+            self.debug(traceback.format_exc())
+            return None, None
 
 
 def facebook_login(email, password, headers):
